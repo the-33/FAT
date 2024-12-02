@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="bin\Debug\net6.0\commands\cat.comm" />
+    <None Include="bin\Debug\net6.0\commands\cd.comm" />
+    <None Include="bin\Debug\net6.0\commands\cls.comm" />
+    <None Include="bin\Debug\net6.0\commands\cp.comm" />
+    <None Include="bin\Debug\net6.0\commands\exit.comm" />
+    <None Include="bin\Debug\net6.0\commands\file.comm" />
+    <None Include="bin\Debug\net6.0\commands\find.comm" />
+    <None Include="bin\Debug\net6.0\commands\grep.comm" />
+    <None Include="bin\Debug\net6.0\commands\help.comm" />
+    <None Include="bin\Debug\net6.0\commands\locate.comm" />
+    <None Include="bin\Debug\net6.0\commands\ls.comm" />
+    <None Include="bin\Debug\net6.0\commands\mkdir.comm" />
+    <None Include="bin\Debug\net6.0\commands\mv.comm" />
+    <None Include="bin\Debug\net6.0\commands\nano.comm" />
+    <None Include="bin\Debug\net6.0\commands\pwd.comm" />
+    <None Include="bin\Debug\net6.0\commands\rm.comm" />
+    <None Include="bin\Debug\net6.0\commands\rmdir.comm" />
+    <None Include="bin\Debug\net6.0\commands\touch.comm" />
+  </ItemGroup>
+
+</Project>
