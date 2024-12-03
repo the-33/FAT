@@ -120,5 +120,11 @@ namespace Terminal
             Thread.Sleep(100);
             return "";
         };
+
+        public Func<string?[], Fat, string> echoExecution = (args, fat) =>
+        {
+            Environment.Exit(0);
+            return "";
+        };
     }
 }

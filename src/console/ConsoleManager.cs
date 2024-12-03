@@ -48,6 +48,7 @@ namespace Terminal
                 { "cls", new Command(descPath + "cls" + descFileType, exec.clsExecution) }, // Limpia la pantalla
                 { "clear", new Command(descPath + "cls" + descFileType, exec.clsExecution) }, // Limpia la pantalla
                 { "exit", new Command(descPath + "exit" + descFileType, exec.exitExecution) }, // Detiene la ejecucion del programa
+                { "echo", new Command(descPath + "echo" + descFileType, exec.echoExecution) }, // Detiene la ejecucion del programa
             };
         }
 

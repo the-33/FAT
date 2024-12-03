@@ -1,0 +1,21 @@
+##mandatory
+#NAME#
+<rainbow><u>cat</u></rainbow>
+#FORMAT#
+Usage: <b>cat <color=YELLOW>[OPTION]</color></b>... <b><color=GREEN>[FILE]</color></b>...
+#DESCRIPTION#
+Concatenate <color=GREEN><b>FILE(s)</b></color> to standard output.
+##optional
+#EXPLANATION#
+It shows the specified <color=GREEN><b>FILE</b></color> or <color=GREEN><b>FILES</b></color> in the console output, it has some parameters to modify how files are shown.
+#OPTIONS#
+   <color=YELLOW>-A,<tab>--show-all</color><tab>equivalent to <color=YELLOW>-T -E</color>
+   <color=YELLOW>-E,<tab>--show-ends</color><tab>display <b>$</b> at the end of each line
+   <color=YELLOW>-n,<tab>--number</color><tab>number all output lines
+   <color=YELLOW>-s,<tab>--squeeze-blank</color><tab>supress repeated empty output lines
+   <color=YELLOW>-T,<tab>--show-tabs</color><tab>display <b>TAB</b> characters as <b>^I</b>
+   <tab><color=YELLOW>--help</color><tab>display this help
+#NOTES#
+Examples:
+   <b>cat <color=GREEN>f g</color> <color=YELLOW>-A</color></b><tab>Output <color=GREEN>f</color> content, then <color=GREEN>g</color> content showing <b>$</b> at the end of each line and <b>^I</b> instead of <b>TAB</b> characters.
+   <b>cat <color=GREEN>f</color> <color=YELLOW>-n</color></b><tab>Output <color=GREEN>f</color> content with numbered lines.
