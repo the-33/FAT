@@ -14,5 +14,10 @@ namespace FAT.Data
         {
             Data = new byte[clusterSize];
         }
+
+        public override string ToString()
+        {
+            return System.Text.Encoding.UTF8.GetString(Data, 0, Data.Length);
+        }
     }
 }

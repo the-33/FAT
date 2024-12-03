@@ -23,5 +23,15 @@ namespace FAT.MetaData
             Damaged = false;
             Reserved = false;
         }
+
+        public override string ToString()
+        {
+            char availableChar = (Available) ? 'T' : 'F';
+            char damagedChar = (Damaged) ? 'T' : 'F';
+            char reservedChar = (Reserved) ? 'T' : 'F';
+            char endChar = (End) ? 'T' : 'F';
+
+            return "{ Avaliable: " + availableChar + "\tDamaged: " + damagedChar + "\tReserved: " + reservedChar + "\tNext: Cluster " + Next + "\tEnd: " + endChar + " }";
+        }
     }
 }
