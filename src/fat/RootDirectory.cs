@@ -8,25 +8,43 @@ namespace FAT.MetaData
 {
     internal class RootDirectory
     {
-        private struct Entry
+        public struct Entry
         {
             public string Name { get; set; }
             public string Type { get; set; }
-            public ClusterMetadata StartingCluster { get; set; }
+            public int StartingCluster { get; set; }
 
-            public Entry(string name, string type, ClusterMetadata startingCluster)
+            public Entry(string name, string type, int startingCluster)
             {
                 this.Name = name;
                 this.Type = type;
                 this.StartingCluster = startingCluster;
             }
+
+            public override string ToString()
+            {
+                if (Type != "") return Name + "." + Type;
+                else return Name;
+            }
         };
 
-        private List<Entry> entries {  get; set; }
+        public List<Entry> Entries {  get; set; }
 
         public RootDirectory()
         {
-            entries = new List<Entry>();
+            Entries = new List<Entry>();
+        }
+
+        public override string ToString()
+        {
+            string returnStr = "";
+
+            foreach (Entry e in Entries)
+            {
+                returnStr += e.ToString();
+            }
+
+            return returnStr;
         }
     }
 }

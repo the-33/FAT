@@ -10,18 +10,16 @@ namespace FAT.MetaData
     internal class ClusterMetadata
     {
         public bool Available {  get; set; }
-        public bool Damaged { get; set; }
-        public bool Reserved { get; set; }
+        private bool Damaged;
+        private bool Reserved;
         public int Next {  get; set; }
         public bool End { get; set; }
-        public Cluster Self { get; set; }
 
-        public ClusterMetadata(Cluster self, bool available = true, int next = -1, bool end = true) 
+        public ClusterMetadata(bool available = true, int next = -1, bool end = true) 
         { 
             this.Available = available;
             this.Next = next;
             this.End = end;
-            this.Self = self;
             Damaged = false;
             Reserved = false;
         }

@@ -16,7 +16,7 @@ namespace Terminal
 
     public class ConsoleManager
     {
-        const string descPath = "./commands/"; // Carpeta donde estan los archivos de descripcion de los comandos
+        const string descPath = "../../../commands/"; // Carpeta donde estan los archivos de descripcion de los comandos
         const string descFileType = ".comm"; // Extension de archivo de descripcion de los comandos
 
         public Dictionary<string, Command> path { get; }
