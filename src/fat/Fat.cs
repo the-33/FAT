@@ -95,6 +95,11 @@ namespace FAT
             return true;
         }
 
+        public void removeDirectory(string name) 
+        { 
+            
+        }
+
         public string listDirectory(string path)
         {
             int directoryCluster = findDirectoryCluster(path);
