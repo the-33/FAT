@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection.PortableExecutable;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using FAT.Data;
 using FAT.MetaData;
 using Microsoft.VisualBasic.FileIO;
+using static Crayon.Output;
 
 namespace FAT
 {
@@ -17,15 +20,15 @@ namespace FAT
      * Crear directorio DONE
      * Eliminar directorio DONE
      * Mover directorio DONE
-     * Copiar directorio
+     * Copiar directorio DONE
      * Mostrar contenido directorio DONE
      * 
      * Crear archivo DONE
      * Eliminar archivo DONE
      * Mover archivo DONE
-     * Copiar archivo
-     * Sobreescribir archivo
-     * Escribir en archivo
+     * Copiar archivo DONE
+     * Sobreescribir archivo DONE
+     * Escribir en archivo DONE
      * Mostrar contenido de archivo DONE
      */
 
@@ -142,12 +145,12 @@ namespace FAT
                 if (routing.Length > 0)
                 {
                     cluster = metadata.RootDirectory.Entries.IndexOf(metadata.RootDirectory.Entries.Find(e => e.Name == routing[0]));
-                    if (cluster == -1) throw new Exception("Could not find specified path");
+                    if (cluster == -1) throw new Exception(Bold().Red().Text("Could not find " + path + "\n"));
                     for (int i = 1; i < routing.Length; i++)
                     {
                         FAT.Data.Directory d = (FAT.Data.Directory)data.Clusters[cluster];
                         cluster = d.Entries.IndexOf(d.Entries.Find(e => e.Name == routing[i]));
-                        if (cluster == -1) throw new Exception("Could not find specified path");
+                        if (cluster == -1) throw new Exception(Bold().Red().Text("Could not find " + path + "\n"));
                     }
                 }
             }
@@ -199,8 +202,8 @@ namespace FAT
 
                 foreach (Entry e in ((FAT.Data.Directory)data.Clusters[cluster]).Entries)
                 {
-                    if (e.Type == "") removeDirectory(path + "/name", e.Name);
-                    else removeFile(path + "/name", e.Name + "." + e.Type);
+                    if (e.Type == "") removeDirectory(path + "/" + name, e.Name);
+                    else removeFile(path + "/" + name, e.Name + "." + e.Type);
                 }
 
                 if (directoryCluster == -1) metadata.RootDirectory.Entries.Remove(metadata.RootDirectory.Entries.Find(x => x.StartingCluster == cluster));
@@ -214,57 +217,77 @@ namespace FAT
                 {
                     foreach (Entry e in metadata.RootDirectory.Entries)
                     {
-                        if (e.Type == "") removeDirectory(path + "/name", e.Name);
-                        else removeFile(path + "/name", e.Name + "." + e.Type);
+                        if (e.Type == "") removeDirectory(path + "/" + name, e.Name);
+                        else removeFile(path + "/" + name, e.Name + "." + e.Type);
                     }
                 }
                 else
                 {
                     foreach (Entry e in ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries)
                     {
-                        if (e.Type == "") removeDirectory(path + "/name", e.Name);
-                        else removeFile(path + "/name", e.Name + "." + e.Type);
+                        if (e.Type == "") removeDirectory(path + "/" + name, e.Name);
+                        else removeFile(path + "/" + name, e.Name + "." + e.Type);
                     }
                 }
             }
             return true;
         }
 
-        public bool moveDirectory(string path, string newPath, string newName = "", string name = "")
+        public bool moveDirectory(string path, string name, string newPath, string newName = "")
         {
+            if (newName == "") newName = name;
+
             int directoryCluster = findDirectoryCluster(path);
             int newDirectoryCluster = findDirectoryCluster(newPath);
 
             if (directoryCluster == -2 || newDirectoryCluster == -2) return false;
 
-            if(name != "")
+            Entry directoryEntry;
+
+            if (directoryCluster == -1)
             {
-                Entry directoryEntry;
-
-                if (directoryCluster == -1)
-                {
-                    directoryEntry = metadata.RootDirectory.Entries.Find(x => x.Name == name);
-                    metadata.RootDirectory.Entries.Remove(directoryEntry);
-                }
-                else
-                {
-                    directoryEntry = ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Find(x => x.Name == name);
-                    ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Remove(directoryEntry);
-                }
-
-                if (newDirectoryCluster == -1) metadata.RootDirectory.Entries.Add(new Entry(newName, "", directoryEntry.StartingCluster));
-                else ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Add(new Entry(newName, "", directoryEntry.StartingCluster));
+                directoryEntry = metadata.RootDirectory.Entries.Find(x => x.Name == name);
+                metadata.RootDirectory.Entries.Remove(directoryEntry);
             }
             else
             {
-
+                directoryEntry = ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Find(x => x.Name == name);
+                ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Remove(directoryEntry);
             }
+
+            if (newDirectoryCluster == -1) metadata.RootDirectory.Entries.Add(new Entry(newName, "", directoryEntry.StartingCluster));
+            else ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Add(new Entry(newName, "", directoryEntry.StartingCluster));
 
             return true;
         }
 
-        public bool copyDirectory()
+        public bool copyDirectory(string path, string name, string newPath, string newName = "")
         {
+            if (newName == "") newName = name;
+
+            int directoryCluster = findDirectoryCluster(path + "/" + name);
+
+            if (directoryCluster == -2) return false;
+            if (directoryCluster == -1)
+            {
+                Console.WriteLine(Bold().Red().Text("You can not copy the root directory"));
+                return false;
+            }
+
+            bool success = addDirectory(newPath, newName);
+
+            if (!success)
+            {
+                Console.WriteLine(Bold().Red().Text("Could not copy the directory " + path + "/" + name + " to " + newPath + "/" + newName + "\n"));
+                return false;
+            }
+
+            foreach (Entry e in ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries)
+            {
+                if (e.Type == "") copyDirectory(path + "/" + name, e.Name, newPath + "/" + newName, e.Name);
+                else copyFile(path + "/" + name, e.Name, newPath + "/" + newName, e.Name);
+            }
+
             return true;
         }
 
@@ -281,7 +304,11 @@ namespace FAT
         public bool addFile(string name, string path)
         {
             string fileType = name.Split('.')[1];
-            string fileName = name.Split(".")[0];
+            string fileName = name.Split('.')[0];
+
+            int directoryCluster = findDirectoryCluster(path);
+
+            if (directoryCluster == -2) return false;
 
             ClusterMetadata? cluster = metadata.Clusters.Find(x => x.Available = true);
 
@@ -296,20 +323,16 @@ namespace FAT
             cluster.End = true;
             cluster.Next = -1;
 
-            int directoryCluster = findDirectoryCluster(path);
-
-            if (directoryCluster == -2) return false;
-
             if (directoryCluster == -1) metadata.RootDirectory.Entries.Add(new Entry(name, fileType, metadata.Clusters.IndexOf(cluster)));
             else ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Add(new Entry(name, fileType, metadata.Clusters.IndexOf(cluster)));
 
             return true;
         }
 
-        public bool removeFile(string path, string name)
+        public bool removeFile(string name, string path)
         {
             string fileType = name.Split('.')[1];
-            string fileName = name.Split(".")[0];
+            string fileName = name.Split('.')[0];
 
             int cluster = -1;
 
@@ -319,6 +342,12 @@ namespace FAT
 
             if (directoryCluster == -1) cluster = metadata.RootDirectory.Entries.Find(x => x.Name == fileName && x.Type == fileType).StartingCluster;
             else cluster = ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Find(x => x.Name == fileName && x.Type == fileType).StartingCluster;
+
+            if (cluster == -1)
+            {
+                Console.WriteLine(Bold().Red().Text("Could not find the file " + path + "/" + name + "/n"));
+                return false;
+            }
 
             do
             {
@@ -333,7 +362,7 @@ namespace FAT
         public bool moveFile(string path, string name, string newPath, string newName = "")
         {
             string fileType = name.Split('.')[1];
-            string fileName = name.Split(".")[0];
+            string fileName = name.Split('.')[0];
 
             string newfileType = (newName == "") ? fileType : newName.Split('.')[1];
             string newfileName = (newName == "") ? fileName : newName.Split(".")[0];
@@ -365,15 +394,105 @@ namespace FAT
         public bool copyFile(string path, string name, string newPath, string newName = "")
         {
             string fileType = name.Split('.')[1];
-            string fileName = name.Split(".")[0];
+            string fileName = name.Split('.')[0];
 
             string newfileType = (newName == "") ? fileType : newName.Split('.')[1];
             string newfileName = (newName == "") ? fileName : newName.Split(".")[0];
 
             int directoryCluster = findDirectoryCluster(path);
-            int newDirectoryCluster = findDirectoryCluster(newPath);
 
-            if (directoryCluster == -2 || newDirectoryCluster == -2) return false;
+            if (directoryCluster == -2) return false;
+
+            bool success = addFile(newName, newPath);
+
+            if (!success)
+            {
+                Console.WriteLine(Bold().Red().Text("Could not copy the file " + path + "/" + name + " to " + newPath + "/" + newName + "\n"));
+                return false;
+            }
+
+            success = writeToFile(newName, newPath, catFile(name, path), true);
+
+            if (!success)
+            {
+                Console.WriteLine(Bold().Red().Text("Could not copy the file " + path + "/" + name + " to " + newPath + "/" + newName + "\n"));
+                removeFile(newName, newPath);
+                return false;
+            }
+
+            return true;
+        }
+
+        public bool writeToFile(string name, string path, string content, bool overwrite)
+        {
+            string fileType = name.Split('.')[1];
+            string fileName = name.Split('.')[0];
+
+            int directoryCluster = findDirectoryCluster(path);
+
+            if (directoryCluster == -2) return false;
+
+            if (overwrite) content = catFile(name, path) + "\n" + content;
+
+            removeFile(name, path);
+            addFile(name, path);
+
+            byte[] contentBytes = Encoding.UTF8.GetBytes(content);
+
+            Queue<byte[]> packets = new Queue<byte[]>();
+            byte[] packet = new byte[clusterSize];
+
+            for (int i = 0, j = 0; i<contentBytes.Length; i++, j++)
+            {
+                packet[j] = contentBytes[i];
+                if (j == (packet.Length-1) || (i+1) == contentBytes.Length)
+                {
+                    packets.Enqueue(packet);
+                    j = -1;
+                }
+            }
+
+            int cluster = -1;
+
+            if (directoryCluster == -1) cluster = metadata.RootDirectory.Entries.Find(x => x.Name == fileName && x.Type == fileType).StartingCluster;
+            else cluster = ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Find(x => x.Name == fileName && x.Type == fileType).StartingCluster;
+
+            if (cluster == -1)
+            {
+                Console.WriteLine(Bold().Red().Text("Could not find the file " + path + "/" + name + "/n"));
+                return false;
+            }
+
+            ClusterMetadata fileCluster;
+
+            while (packets.Count > 0) 
+            {
+                fileCluster = metadata.Clusters[cluster];
+                ((FAT.Data.File)data.Clusters[cluster]).Data = packets.Dequeue();
+
+                if(packets.Count > 0)
+                {
+                    ClusterMetadata? nextCluster = metadata.Clusters.Find(x => x.Available == true);
+
+                    if(nextCluster == null)
+                    {
+                        nextCluster = new ClusterMetadata();
+                        metadata.Clusters.Add(nextCluster);
+                        data.Clusters.Add(new FAT.Data.File(clusterSize));
+                    }
+
+                    fileCluster.Next = metadata.Clusters.IndexOf(nextCluster);
+                    fileCluster.Available = false;
+                    fileCluster.End = false;
+
+                    cluster = fileCluster.Next;
+                }
+                else
+                {
+                    fileCluster.Available = false;
+                    fileCluster.End = true;
+                }
+            }
 
             return true;
         }
@@ -381,7 +500,7 @@ namespace FAT
         public string catFile(string name, string path)
         {
             string fileType = name.Split('.')[1];
-            string fileName = name.Split(".")[0];
+            string fileName = name.Split('.')[0];
             string content = "";
 
             int cluster = -1;

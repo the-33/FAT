@@ -15,7 +15,7 @@ namespace FAT.MetaData
         public int Next {  get; set; }
         public bool End { get; set; }
 
-        public ClusterMetadata(bool available = true, int next = -1, bool end = true) 
+        public ClusterMetadata(bool available = true, int next = -1, bool end = false) 
         { 
             this.Available = available;
             this.Next = next;

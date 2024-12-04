@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using FAT;
+using static FAT.Fat;
 
 namespace Terminal
 {
@@ -38,11 +42,34 @@ namespace Terminal
 
         public Func<string?[], Fat, string> mkdirExecution = (args, fat) =>
         {
+            //string regexPattern = @"^[a-zA-Z0-9_-]+$";
+            //if (!Regex.IsMatch(name, regexPattern)) Console.WriteLine(Bold().Red().Text("Names can only contain alpanumeric characters and '-' or '_'."));
+
             return "";
         };
 
         public Func<string?[], Fat, string> rmdirExecution = (args, fat) =>
         {
+            //if (name.Contains('*'))
+            //{
+            //    string regexPattern = "^" + Regex.Escape(name).Replace("\\*", ".*") + "$";
+
+            //    if (directoryCluster == -1)
+            //    {
+            //        foreach (Entry e in metadata.RootDirectory.Entries)
+            //        {
+            //            if (Regex.IsMatch(e.Name, regexPattern) && e.Type == "") removeDirectory(path, e.Name);
+            //        }
+            //    }
+            //    else
+            //    {
+            //        foreach (Entry e in ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries)
+            //        {
+            //            if (Regex.IsMatch(e.Name, regexPattern) && e.Type == "") removeDirectory(path, e.Name);
+            //        }
+            //    }
+            //}
+
             return "";
         };
 
@@ -58,6 +85,52 @@ namespace Terminal
 
         public Func<string?[], Fat, string> mvExecution = (args, fat) =>
         {
+            //if (name.Contains('*'))
+            //{
+            //    if (newName != "") Console.WriteLine(Bold().Red().Text("You can't move more than one directory to another and assign them the same name."));
+
+            //    string regexPattern = "^" + Regex.Escape(name).Replace("\\*", ".*") + "$";
+
+            //    if (directoryCluster == -1)
+            //    {
+            //        foreach (Entry e in metadata.RootDirectory.Entries)
+            //        {
+            //            if (Regex.IsMatch(e.Name, regexPattern) && e.Type == "") moveDirectory(path, e.Name, newPath);
+            //        }
+            //    }
+            //    else
+            //    {
+            //        foreach (Entry e in ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries)
+            //        {
+            //            if (Regex.IsMatch(e.Name, regexPattern) && e.Type == "") moveDirectory(path, e.Name, newPath);
+            //        }
+            //    }
+
+            //    return true;
+            //}
+
+            //if (name.Contains('*'))
+            //{
+            //    if (newName != "") Console.WriteLine(Bold().Red().Text("You can't move more than one file to the same directory and assign them the same name"));
+
+            //    string regexPattern = "^" + Regex.Escape(name).Replace("\\*", ".*") + "$";
+
+            //    if (directoryCluster == -1)
+            //    {
+            //        foreach (Entry e in metadata.RootDirectory.Entries)
+            //        {
+            //            if (Regex.IsMatch(e.Name + "." + e.Type, regexPattern)) moveFile(path, e.Name, newPath);
+            //        }
+            //    }
+            //    else
+            //    {
+            //        foreach (Entry e in ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries)
+            //        {
+            //            if (Regex.IsMatch(e.Name + "." + e.Type, regexPattern)) moveFile(path, e.Name, newPath);
+            //        }
+            //    }
+            //}
+
             return "";
         };
 
