@@ -24,6 +24,8 @@ namespace FAT
      * Eliminar archivo DONE
      * Mover archivo DONE
      * Copiar archivo
+     * Sobreescribir archivo
+     * Escribir en archivo
      * Mostrar contenido de archivo DONE
      */
 
@@ -228,29 +230,41 @@ namespace FAT
             return true;
         }
 
-        public bool moveDirectory(string path, string name, string newPath, string newName)
+        public bool moveDirectory(string path, string newPath, string newName = "", string name = "")
         {
             int directoryCluster = findDirectoryCluster(path);
             int newDirectoryCluster = findDirectoryCluster(newPath);
 
             if (directoryCluster == -2 || newDirectoryCluster == -2) return false;
 
-            Entry directoryEntry;
-
-            if (directoryCluster == -1)
+            if(name != "")
             {
-                directoryEntry = metadata.RootDirectory.Entries.Find(x => x.Name == name);
-                metadata.RootDirectory.Entries.Remove(directoryEntry);
+                Entry directoryEntry;
+
+                if (directoryCluster == -1)
+                {
+                    directoryEntry = metadata.RootDirectory.Entries.Find(x => x.Name == name);
+                    metadata.RootDirectory.Entries.Remove(directoryEntry);
+                }
+                else
+                {
+                    directoryEntry = ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Find(x => x.Name == name);
+                    ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Remove(directoryEntry);
+                }
+
+                if (newDirectoryCluster == -1) metadata.RootDirectory.Entries.Add(new Entry(newName, "", directoryEntry.StartingCluster));
+                else ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Add(new Entry(newName, "", directoryEntry.StartingCluster));
             }
             else
             {
-                directoryEntry = ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Find(x => x.Name == name);
-                ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Remove(directoryEntry);
+
             }
 
-            if (newDirectoryCluster == -1) metadata.RootDirectory.Entries.Add(new Entry(newName, "", directoryEntry.StartingCluster));
-            else ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Add(new Entry(newName, "", directoryEntry.StartingCluster));
+            return true;
+        }
 
+        public bool copyDirectory()
+        {
             return true;
         }
 
@@ -316,13 +330,13 @@ namespace FAT
             return true;
         }
 
-        public bool moveFile(string path, string name, string newPath, string newName)
+        public bool moveFile(string path, string name, string newPath, string newName = "")
         {
             string fileType = name.Split('.')[1];
             string fileName = name.Split(".")[0];
 
-            string newfileType = newName.Split('.')[1];
-            string newfileName = newName.Split(".")[0];
+            string newfileType = (newName == "") ? fileType : newName.Split('.')[1];
+            string newfileName = (newName == "") ? fileName : newName.Split(".")[0];
 
             int directoryCluster = findDirectoryCluster(path);
             int newDirectoryCluster = findDirectoryCluster(newPath);
@@ -344,6 +358,22 @@ namespace FAT
 
             if (newDirectoryCluster == -1) metadata.RootDirectory.Entries.Add(new Entry(newfileName, newfileType, fileEntry.StartingCluster));
             else ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Add(new Entry(newfileName, newfileType, fileEntry.StartingCluster));
+
+            return true;
+        }
+
+        public bool copyFile(string path, string name, string newPath, string newName = "")
+        {
+            string fileType = name.Split('.')[1];
+            string fileName = name.Split(".")[0];
+
+            string newfileType = (newName == "") ? fileType : newName.Split('.')[1];
+            string newfileName = (newName == "") ? fileName : newName.Split(".")[0];
+
+            int directoryCluster = findDirectoryCluster(path);
+            int newDirectoryCluster = findDirectoryCluster(newPath);
+
+            if (directoryCluster == -2 || newDirectoryCluster == -2) return false;
 
             return true;
         }
