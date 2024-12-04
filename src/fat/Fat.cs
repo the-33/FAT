@@ -32,6 +32,8 @@ namespace FAT
      * Mostrar contenido de archivo DONE
      */
 
+    //TODO: Cambiar el move directory y el copy directory para que solo pidan un path y un newPath??????
+
     public class Fat
     {
         const int clusterSize = 3200;
