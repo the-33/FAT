@@ -112,7 +112,7 @@ No se pueden usar los caracteres `"<"` y `">"` ya que el formateador los confund
 
 El siguiente codigo se encuentra en el archivo `bin/Debug/net6.0/commands/cat.comm` del proyecto, es un ejemplo de como formatear un archivo .comm para que muestre correctamente su informacion.
 
-``````````{#mycode .haskell .numberLines startFrom="1"}
+~~~~~~~~~~comm
 ##mandatory
 #NAME#
 <rainbow><u>cat</u></rainbow>
@@ -134,7 +134,7 @@ It shows the specified <color=GREEN><b>FILE</b></color> or <color=GREEN><b>FILES
 Examples:
    <b>cat <color=GREEN>f g</color> <color=YELLOW>-A</color></b><tab>Output <color=GREEN>f</color> content, then <color=GREEN>g</color> content showing <b>$</b> at the end of each line and <b>^I</b> instead of <b>TAB</b> characters.
    <b>cat <color=GREEN>f</color> <color=YELLOW>-n</color></b><tab>Output <color=GREEN>f</color> content with numbered lines.
-``````````
+~~~~~~~~~~
 
 ### Resultado:
 
