@@ -1,1 +1,0 @@
-pandoc -s --toc --template=C:\.pandoc\templates\easy-pandoc-templates\html\uikit.html --highlight-style=haddock --syntax-definition=comm.xml FORMAT.md -o FORMAT.html
