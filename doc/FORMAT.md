@@ -140,4 +140,4 @@ Examples:
 
 El resultado al formatear a salida de consola este archivo, usando el comando `cat --help` es el siguiente.
 
-![Imagen que muestra el texto de ayuda de cat que ha sido escrito en .comm tras ejecutar el comando 'cat --help'](./img/cat--help.png)
+![*Imagen que muestra el texto de ayuda de cat que ha sido escrito en .comm tras ejecutar el comando 'cat --help'*](./img/cat--help.png)
