@@ -82,9 +82,7 @@ Las decoraciones para el texto disponibles son:
 > **[!NOTE]**  
 >  
 >El efecto arcoiris le da un color del arcoiris a cada letra que haya dentro de las etiquetas, no tiene animacion.  
->  
 >A su vez, la etiqueta `<color>` no funciona junto con la etiqueta `<rainbow>` por lo que rainbow modificara el color establecido.  
->  
 >Con la etiqueta `<rainbow>` solo funcionan las etiquetas `<d>`, `<u>` y `</r>`.
 
 ## 4. Caracteres especiales
@@ -94,9 +92,8 @@ Las decoraciones para el texto disponibles son:
 Los tabuladores se introducen poniendo la etiqueta `<tab>` la cual se reemplazara por un tabulador en el formateador.
 
 > Ej:  
->   
+>  
 > `<tab>Este texto esta tabulado una vez`  
->   
 > `<tab><tab>Este texto esta tabulado dos veces`
 
 ### Saltos de linea
@@ -110,6 +107,8 @@ Los saltos de linea se introducen poniendo la etiqueta `<br>` y se trata de mane
 No se pueden usar los caracteres `"<"` y `">"` ya que el formateador los confunde con etiquetas, por lo cual para que se interpreten correctamente hay que poner `"#<#"` y `"#>#"` respectivamente.
 
 ## 6. Ejemplo (cat)
+
+### Codigo:
 
 El siguiente codigo se encuentra en el archivo `bin/Debug/net6.0/commands/cat.comm` del proyecto, es un ejemplo de como formatear un archivo .comm para que muestre correctamente su informacion.
 
@@ -137,6 +136,8 @@ Examples:
    <b>cat <color=GREEN>f</color> <color=YELLOW>-n</color></b><tab>Output <color=GREEN>f</color> content with numbered lines.
 ``````````
 
+### Resultado:
+
 El resultado al formatear a salida de consola este archivo, usando el comando `cat --help` es el siguiente.
 
-![Imagen que muestra cat --help y el texto de ayuda de cat que ha sido escrito en .commm](./img/cat--help.png)
+![Imagen que muestra el texto de ayuda de cat que ha sido escrito en .comm tras ejecutar el comando 'cat --help'](./img/cat--help.png)
