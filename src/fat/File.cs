@@ -17,7 +17,7 @@ namespace FAT.Data
 
         public override string ToString()
         {
-            return System.Text.Encoding.UTF8.GetString(Data, 0, Data.Length);
+            return System.Text.Encoding.UTF8.GetString(Data, 0, Data.Length).Replace("\0", "");
         }
     }
 }

@@ -31,7 +31,12 @@ namespace FAT.MetaData
             char reservedChar = (Reserved) ? 'T' : 'F';
             char endChar = (End) ? 'T' : 'F';
 
-            return "{ Avaliable: " + availableChar + "\tDamaged: " + damagedChar + "\tReserved: " + reservedChar + "\tNext: Cluster " + Next + "\tEnd: " + endChar + " }";
+            string returnStr = "{ Avaliable: " + availableChar + "\tDamaged: " + damagedChar + "\tReserved: " + reservedChar + "\tNext: ";
+            if (Next != -1) returnStr += "Cluster " + Next;
+            else returnStr += "NULL";
+            returnStr += "\tEnd: " + endChar + " }";
+
+            return returnStr;
         }
     }
 }

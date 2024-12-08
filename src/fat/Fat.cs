@@ -34,7 +34,7 @@ namespace FAT
 
     public class Fat
     {
-        const int clusterSize = 3200;
+        const int clusterSize = 30;
 
         private struct Metadata
         {
@@ -45,7 +45,7 @@ namespace FAT
 
             public Metadata(string fatCopyPath = "")
             {
-                this.BootCode = new BootCode();
+                BootCode = new BootCode();
                 this.FatCopyPath = fatCopyPath;
                 Clusters = new List<ClusterMetadata>();
                 RootDirectory = new RootDirectory();
@@ -58,7 +58,7 @@ namespace FAT
                 using (Process process = new Process()) // Obtiene el nombre de usuario y el nombre del equipo
                 {
                     process.StartInfo.FileName = "cmd.exe";
-                    process.StartInfo.Arguments = @"/c pwd";
+                    process.StartInfo.Arguments = @"/c cd";
                     process.StartInfo.UseShellExecute = false;
                     process.StartInfo.RedirectStandardOutput = true;
                     process.Start();
@@ -94,7 +94,8 @@ namespace FAT
 
                 return returnStr;
             }
-        }
+        };
+
         private struct Data
         {
             public List<Cluster> Clusters { get; set; }
@@ -120,23 +121,28 @@ namespace FAT
 
             public override string ToString()
             {
-                if (Type != "") return "📁 " + Name + "." + Type;
-                else return "📄 " + Name;
+                if (Type == "") return "📁 " + Name;
+                else return "📄 " + Name + "." + Type;
             }
         };
 
         private Metadata metadata;
         private Data data;
 
-        public Fat()
+        public Fat(string fatCopyPath = "")
         {
-            metadata = new Metadata();
+            metadata = new Metadata(fatCopyPath);
             data = new Data();
+        }
+
+        public void showMetadata()
+        {
+            Console.Write(metadata);
         }
 
         private int findDirectoryCluster(string path)
         {
-            path = path.Replace("C://", "");
+            path = path.Replace("C:/", "");
             string[] routing = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
             int cluster = -1;
 
@@ -165,13 +171,17 @@ namespace FAT
 
         public bool addDirectory(string name, string path)
         {
-            ClusterMetadata? cluster = metadata.Clusters.Find(x => x.Available = true);
+            ClusterMetadata? cluster = metadata.Clusters.Find(x => x.Available == true);
 
             if (cluster == null)
             {
                 cluster = new ClusterMetadata();
                 metadata.Clusters.Add(cluster);
                 data.Clusters.Add(new FAT.Data.Directory());
+            }
+            else
+            {
+                data.Clusters[metadata.Clusters.IndexOf(cluster)] = new FAT.Data.Directory();
             }
 
             cluster.Available = false;
@@ -310,7 +320,7 @@ namespace FAT
 
             if (directoryCluster == -2) return false;
 
-            ClusterMetadata? cluster = metadata.Clusters.Find(x => x.Available = true);
+            ClusterMetadata? cluster = metadata.Clusters.Find(x => x.Available == true);
 
             if (cluster == null)
             {
@@ -318,13 +328,17 @@ namespace FAT
                 metadata.Clusters.Add(cluster);
                 data.Clusters.Add(new FAT.Data.File(clusterSize));
             }
+            else
+            {
+                data.Clusters[metadata.Clusters.IndexOf(cluster)] = new FAT.Data.File(clusterSize);
+            }
 
             cluster.Available = false;
             cluster.End = true;
             cluster.Next = -1;
 
-            if (directoryCluster == -1) metadata.RootDirectory.Entries.Add(new Entry(name, fileType, metadata.Clusters.IndexOf(cluster)));
-            else ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Add(new Entry(name, fileType, metadata.Clusters.IndexOf(cluster)));
+            if (directoryCluster == -1) metadata.RootDirectory.Entries.Add(new Entry(fileName, fileType, metadata.Clusters.IndexOf(cluster)));
+            else ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Add(new Entry(fileName, fileType, metadata.Clusters.IndexOf(cluster)));
 
             return true;
         }
@@ -349,12 +363,16 @@ namespace FAT
                 return false;
             }
 
-            do
+            while (!metadata.Clusters[cluster].End)
             {
                 metadata.Clusters[cluster].Available = true;
-                cluster = metadata.Clusters[cluster].Next;
+                if (!metadata.Clusters[cluster].End) cluster = metadata.Clusters[cluster].Next;
             }
-            while (!metadata.Clusters[cluster].End);
+
+            metadata.Clusters[cluster].Available = true;
+
+            if (directoryCluster == -1) metadata.RootDirectory.Entries.Remove(metadata.RootDirectory.Entries.Find(x => x.Name == fileName && x.Type == fileType));
+            else ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Remove(((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Find(x => x.Name == fileName && x.Type == fileType));
 
             return true;
         }
@@ -376,12 +394,12 @@ namespace FAT
 
             if (directoryCluster == -1)
             {
-                fileEntry = metadata.RootDirectory.Entries.Find(x => x.Name == name);
+                fileEntry = metadata.RootDirectory.Entries.Find(x => x.Name == fileName && x.Type == fileType);
                 metadata.RootDirectory.Entries.Remove(fileEntry);
             }
             else
             {
-                fileEntry = ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Find(x => x.Name == name);
+                fileEntry = ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Find(x => x.Name == fileName && x.Type == fileType);
                 ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Remove(fileEntry);
             }
 
@@ -423,7 +441,7 @@ namespace FAT
             return true;
         }
 
-        public bool writeToFile(string name, string path, string content, bool overwrite)
+        public bool writeToFile(string name, string path, string input, bool overwrite = true)
         {
             string fileType = name.Split('.')[1];
             string fileName = name.Split('.')[0];
@@ -432,23 +450,23 @@ namespace FAT
 
             if (directoryCluster == -2) return false;
 
-            if (overwrite) content = catFile(name, path) + "\n" + content;
+            string content = input;
+
+            if (!overwrite) content = catFile(name, path) + input;
 
             removeFile(name, path);
             addFile(name, path);
 
-            byte[] contentBytes = Encoding.UTF8.GetBytes(content);
+            Queue<string> packets = new Queue<string>();
+            string packet = "";
 
-            Queue<byte[]> packets = new Queue<byte[]>();
-            byte[] packet = new byte[clusterSize];
-
-            for (int i = 0, j = 0; i<contentBytes.Length; i++, j++)
+            for (int i = 0, j = 0; i<content.Length; i++, j++)
             {
-                packet[j] = contentBytes[i];
-                if (j == (packet.Length-1) || (i+1) == contentBytes.Length)
+                packet += content[i];
+                if (packet.Length == clusterSize || (i+1) == content.Length)
                 {
                     packets.Enqueue(packet);
-                    j = -1;
+                    packet = "";
                 }
             }
 
@@ -468,7 +486,9 @@ namespace FAT
             while (packets.Count > 0) 
             {
                 fileCluster = metadata.Clusters[cluster];
-                ((FAT.Data.File)data.Clusters[cluster]).Data = packets.Dequeue();
+                ((FAT.Data.File)data.Clusters[cluster]).Data = Encoding.UTF8.GetBytes(packets.Dequeue());
+
+                fileCluster.Available = false;
 
                 if(packets.Count > 0)
                 {
@@ -482,14 +502,13 @@ namespace FAT
                     }
 
                     fileCluster.Next = metadata.Clusters.IndexOf(nextCluster);
-                    fileCluster.Available = false;
                     fileCluster.End = false;
 
                     cluster = fileCluster.Next;
                 }
                 else
                 {
-                    fileCluster.Available = false;
+                    fileCluster.Next = -1;
                     fileCluster.End = true;
                 }
             }
@@ -512,12 +531,13 @@ namespace FAT
             if (directoryCluster == -1) cluster = metadata.RootDirectory.Entries.Find(x => x.Name == fileName && x.Type == fileType).StartingCluster;
             else cluster = ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Find(x => x.Name == fileName && x.Type == fileType).StartingCluster;
 
-            do
+            while (!metadata.Clusters[cluster].End)
             {
                 content += ((FAT.Data.File)data.Clusters[cluster]).ToString();
-                cluster = metadata.Clusters[cluster].Next;
+                if(!metadata.Clusters[cluster].End) cluster = metadata.Clusters[cluster].Next;
             }
-            while (!metadata.Clusters[cluster].End);
+
+            content += ((FAT.Data.File)data.Clusters[cluster]).ToString();
 
             return content;
         }

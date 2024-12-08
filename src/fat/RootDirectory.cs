@@ -22,7 +22,7 @@ namespace FAT.MetaData
 
             foreach (Fat.Entry e in Entries)
             {
-                returnStr += e.ToString();
+                returnStr += e.ToString() + "\n";
             }
 
             return returnStr;

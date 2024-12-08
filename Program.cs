@@ -7,10 +7,33 @@ using System.Diagnostics;
 using static Formatter.CommFormatter;
 using static Crayon.Output;
 
+Console.OutputEncoding = System.Text.Encoding.UTF8;
+
 /* Este es el "main" de la aplicacion
  * Las clases y librerias se encuentran en 'src' separadas por contexto de utilidad
  * El programa consta de un bucle principal y una funcion que gestiona el input y lo envia al ConsoleManager
  */
+
+//FAT TEST
+
+Fat testFat = new();
+
+testFat.addDirectory("holamundo", "C://");
+testFat.addFile("jsjs.txt", "C://holamundo");
+testFat.writeToFile("jsjs.txt", "C://holamundo", "aksdfjslkfjslfkjsflksjflksjdflsdkjfsfjsfl\nsdfksfksjflsjdfsjfslfjsJAJAJAJ");
+testFat.writeToFile("jsjs.txt", "C://holamundo", "hoola", false);
+testFat.writeToFile("jsjs.txt", "C://holamundo", "hoola");
+Console.WriteLine(testFat.catFile("jsjs.txt", "C://holamundo"));
+testFat.copyFile("C://holamundo", "jsjs.txt", "C://", "jjj.bat");
+testFat.addDirectory("hey", "C://holamundo");
+Console.WriteLine(testFat.listDirectory("C://holamundo"));
+Console.WriteLine(testFat.listDirectory("C://"));
+testFat.moveFile("C://holamundo", "jsjs.txt", "C://");
+testFat.showMetadata();
+
+return;
+
+//END OF FAT TEST
 
 string? command; // String para guardar el comando que el usuario escriba
 ConsoleManager cM = new(); // Clase para gestionar los comandos
