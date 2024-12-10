@@ -7,6 +7,9 @@ using System.Diagnostics;
 using static Formatter.CommFormatter;
 using static Crayon.Output;
 
+#pragma warning disable CS0162
+const bool TEST_FAT = false; //SET TO TRUE FOR TESTING THE FAT
+
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
 /* Este es el "main" de la aplicacion
@@ -14,27 +17,44 @@ Console.OutputEncoding = System.Text.Encoding.UTF8;
  * El programa consta de un bucle principal y una funcion que gestiona el input y lo envia al ConsoleManager
  */
 
+#region FAT_TEST
 //FAT TEST
+if (TEST_FAT)
+{
+    Fat testFat = new();
 
-Fat testFat = new();
+    testFat.addDirectory("holamundo", "C://");
+    testFat.addFile("jsjs.txt", "C://holamundo");
+    testFat.writeToFile("jsjs.txt", "C://holamundo", "aksdfjslkfjslfkjsflksjflksjdflsdkjfsfjsfl\nsdfksfksjflsjdfsjfslfjsJAJAJAJ");
+    testFat.writeToFile("jsjs.txt", "C://holamundo", "hoola", false);
+    testFat.writeToFile("jsjs.txt", "C://holamundo", "hoola");
+    Console.WriteLine(testFat.catFile("jsjs.txt", "C://holamundo"));
+    testFat.copyFile("C://holamundo", "jsjs.txt", "C://", "jjj.bat");
+    testFat.addDirectory("hey", "C://holamundo");
+    Console.WriteLine(testFat.listDirectory("C://holamundo"));
+    Console.WriteLine(testFat.listDirectory("C://"));
+    testFat.moveFile("C://holamundo", "jsjs.txt", "C://");
+    testFat.showMetadata();
 
-testFat.addDirectory("holamundo", "C://");
-testFat.addFile("jsjs.txt", "C://holamundo");
-testFat.writeToFile("jsjs.txt", "C://holamundo", "aksdfjslkfjslfkjsflksjflksjdflsdkjfsfjsfl\nsdfksfksjflsjdfsjfslfjsJAJAJAJ");
-testFat.writeToFile("jsjs.txt", "C://holamundo", "hoola", false);
-testFat.writeToFile("jsjs.txt", "C://holamundo", "hoola");
-Console.WriteLine(testFat.catFile("jsjs.txt", "C://holamundo"));
-testFat.copyFile("C://holamundo", "jsjs.txt", "C://", "jjj.bat");
-testFat.addDirectory("hey", "C://holamundo");
-Console.WriteLine(testFat.listDirectory("C://holamundo"));
-Console.WriteLine(testFat.listDirectory("C://"));
-testFat.moveFile("C://holamundo", "jsjs.txt", "C://");
-testFat.showMetadata();
+    return;
+}
+#endregion
 
-return;
+#region MAIN_MENU
+//MAIN MENU
 
-//END OF FAT TEST
+print(format("<rainbow> ________ ___  ___       _______           ________  ___       ___       ________  ________  ________  _________  ___  ________  ________           _________  ________  ________  ___       _______      </rainbow>"));
+print(format("<rainbow displacement=2>|\\  _____\\\\  \\|\\  \\     |\\  ___ \\         |\\   __  \\|\\  \\     |\\  \\     |\\   __  \\|\\   ____\\|\\   __  \\|\\___   ___\\\\  \\|\\   __  \\|\\   ___  \\        |\\___   ___\\\\   __  \\|\\   __  \\|\\  \\     |\\  ___ \\     </rainbow>"));
+print(format("<rainbow displacement=4>\\ \\  \\__/\\ \\  \\ \\  \\    \\ \\   __/|        \\ \\  \\|\\  \\ \\  \\    \\ \\  \\    \\ \\  \\|\\  \\ \\  \\___|\\ \\  \\|\\  \\|___ \\  \\_\\ \\  \\ \\  \\|\\  \\ \\  \\\\ \\  \\       \\|___ \\  \\_\\ \\  \\|\\  \\ \\  \\|\\ /\\ \\  \\    \\ \\   __/|    </rainbow>"));
+print(format("<rainbow displacement=6> \\ \\   __\\\\ \\  \\ \\  \\    \\ \\  \\_|/__       \\ \\   __  \\ \\  \\    \\ \\  \\    \\ \\  \\\\\\  \\ \\  \\    \\ \\   __  \\   \\ \\  \\ \\ \\  \\ \\  \\\\\\  \\ \\  \\\\ \\  \\           \\ \\  \\ \\ \\   __  \\ \\   __  \\ \\  \\    \\ \\  \\_|/__  </rainbow>"));
+print(format("<rainbow displacement=8>  \\ \\  \\_| \\ \\  \\ \\  \\____\\ \\  \\_|\\ \\       \\ \\  \\ \\  \\ \\  \\____\\ \\  \\____\\ \\  \\\\\\  \\ \\  \\____\\ \\  \\ \\  \\   \\ \\  \\ \\ \\  \\ \\  \\\\\\  \\ \\  \\\\ \\  \\           \\ \\  \\ \\ \\  \\ \\  \\ \\  \\|\\  \\ \\  \\____\\ \\  \\_|\\ \\ </rainbow>"));
+print(format("<rainbow displacement=10>   \\ \\__\\   \\ \\__\\ \\_______\\ \\_______\\       \\ \\__\\ \\__\\ \\_______\\ \\_______\\ \\_______\\ \\_______\\ \\__\\ \\__\\   \\ \\__\\ \\ \\__\\ \\_______\\ \\__\\\\ \\__\\           \\ \\__\\ \\ \\__\\ \\__\\ \\_______\\ \\_______\\ \\_______\\</rainbow>"));
+print(format("<rainbow displacement=12>    \\|__|    \\|__|\\|_______|\\|_______|        \\|__|\\|__|\\|_______|\\|_______|\\|_______|\\|_______|\\|__|\\|__|    \\|__|  \\|__|\\|_______|\\|__| \\|__|            \\|__|  \\|__|\\|__|\\|_______|\\|_______|\\|_______|</rainbow>"));
 
+#endregion
+
+#region CONSOLE_ENVIRONMENT
+// CONSOLE ENVIRONMENT
 string? command; // String para guardar el comando que el usuario escriba
 ConsoleManager cM = new(); // Clase para gestionar los comandos
 Fat fat = new(); // Memoria FAT
@@ -65,7 +85,9 @@ while (true) // Bucle principal
     command = Console.ReadLine();
     if (command != null && command != "") CommandManager(command);
 }
+#endregion
 
+#region AUXILIARY_METHODS
 void CommandManager(string s)
 {
     //Un comando tendra el formato "COMANDO ARGUMENTOS FLAGS donde PARAMETROS sera una lista de parametros variable del tipo -FLAG ARGUMENTOS"
@@ -77,3 +99,4 @@ void CommandManager(string s)
     }
     cM.execute(command, args, fat);
 }
+#endregion

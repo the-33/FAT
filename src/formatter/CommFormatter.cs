@@ -40,6 +40,7 @@ namespace Formatter
             bool isUnderlined = false;
             bool isReversed = false;
             bool isRainbow = false;
+            int rainbowDisplacement = 0;
 
             foreach (string part in parts)
             {
@@ -55,7 +56,15 @@ namespace Formatter
                     else if (part == "##d##") isDim = true;
                     else if (part == "##u##") isUnderlined = true;
                     else if (part == "##r##") isReversed = true;
-                    else if (part == "##rainbow##") isRainbow = true;
+                    else if (part.StartsWith("##rainbow"))
+                    {
+                        isRainbow = true;
+                        if(part.Contains("displacement="))
+                        {
+                            try { rainbowDisplacement = int.Parse(part.Split("=", StringSplitOptions.RemoveEmptyEntries)[1].Replace("##", "")); }
+                            catch (Exception e) { Console.WriteLine(Red().Bold().Text(e.Message)); }
+                        }
+                    }
                     else if (part == "##/color##") hasColor = false;
                     else if (part == "##/b##") isBold = false;
                     else if (part == "##/d##") isDim = false;
@@ -124,21 +133,22 @@ namespace Formatter
                     else
                     {
                         var rainbow = new Rainbow(0.5);
+                        IOutput format;
+                        for (int i = rainbowDisplacement; i > 0; i--) { format = rainbow.Next(); }
 
                         foreach (char c in s)
                         {
-                            if (c == ' ') Console.Write(" ");
-                            else
-                            {
-                                IOutput format = rainbow.Next();
+                            //if (c == ' ') Console.Write(" ");
+                            //else
+                            //{
+                                format = rainbow.Next();
 
-                                if (isBold) format = format == null ? Bold() : format.Bold();
-                                if (isDim) format = format == null ? Dim() : format.Dim();
-                                if (isUnderlined) format = format == null ? Underline() : format.Underline();
-                                if (isReversed) format = format == null ? Reversed() : format.Reversed();
+                                if (isDim) format = format.Dim();
+                                if (isUnderlined) format = format.Underline();
+                                if (isReversed) format = format.Reversed();
 
                                 Console.Write(format.Text(c.ToString()));
-                            }
+                            //}
                         }
                     }
                 }
