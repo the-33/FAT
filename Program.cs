@@ -13,16 +13,16 @@ class Program
 {
     #region CONSTANTS
     #pragma warning disable CS0162
-    const bool TEST_FAT = false; //SET TO TRUE FOR TESTING THE FAT
+    const bool TEST_FAT = false; // Poner a verdadero para hacer tests a la fat
 
-    //FULLSCREEN STUFF
+    // Cosas para que se abra a pantalla completa, la aplicacion pide permisos de administrador
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern IntPtr GetConsoleWindow();
     [DllImport("user32.dll")]
     private static extern int ShowWindow(IntPtr hWnd, int nCmdShow);
     private const int SW_MAXIMIZE = 3;
 
-    //MAIN MENU
+    // Menu principal
     static public string[] TITLE = 
     {
     "<rainbow> ________ ___  ___       _______           ________  ___       ___       ________  ________  ________  _________  ___  ________  ________           _________  ________  ________  ___       _______      </rainbow>",
@@ -46,7 +46,7 @@ class Program
     public const string MENU_MESSAGE = "SELECT OPTION USING THE ARROW KEYS";
 
     public const int MENU_HORIZONTAL_OFFSET = 0;
-    public const int MENU_VERTICAL_OFFSET = 0;
+    public const int MENU_VERTICAL_OFFSET = -5;
 
     public const string MENU_BOTTOM_MESSAGE = "press ENTER to confirm option";
     #endregion
@@ -59,7 +59,10 @@ class Program
          */
 
         #region SETUP
-        Console.OutputEncoding = System.Text.Encoding.UTF8;
+        // No tocar esta region, importante para que la aplicacion funcione bien
+        Console.OutputEncoding = System.Text.Encoding.UTF8; // Cambia el encoding de texto para admitir mas caracteres, ermite que se dibujen los emojis
+
+        // Cosas inicia la aplicacion en pantalla completa
         IntPtr consoleHandle = GetConsoleWindow();
         if (consoleHandle != IntPtr.Zero)
         {
@@ -103,7 +106,7 @@ class Program
             print(format(s), true);
         }
 
-        PrintMenu(MENU_OPTIONS, selected, MENU_MESSAGE, MENU_HORIZONTAL_OFFSET, MENU_VERTICAL_OFFSET, MENU_BOTTOM_MESSAGE);
+        PrintMenu(MENU_OPTIONS, selected, MENU_MESSAGE, MENU_HORIZONTAL_OFFSET, MENU_VERTICAL_OFFSET, MENU_BOTTOM_MESSAGE); // Para cambiar lo que muestra el menu hacerlo desde la region 'CONSTANTS'
 
         ConsoleKey keyPress;
 
