@@ -80,7 +80,7 @@ Las decoraciones para el texto disponibles son:
 | Arcoiris   	| `<rainbow></rainbow>` 	|
 
 La etiqueta `<rainbow>` admite la opcion `displacement` la cual indica en que color empezar el arcoiris, para obtener un efecto de arcoiris diagonal en titulos *ASCII*.  
-La sintaxis seria de la manera `<rainbow displacement=NUM` donde *NUM* corresponde al numero de colores que ese texto se va a saltar para empezar por otro color.
+La sintaxis seria de la manera `<rainbow displacement=NUM>` donde *NUM* corresponde al numero de colores que ese texto se va a saltar para empezar por otro color.
 
 **Un ejemplo de uso seria el siguiente:**
 

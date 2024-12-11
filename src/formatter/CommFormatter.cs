@@ -26,8 +26,34 @@ namespace Formatter
             return result + "\n";
         }
 
-        public static void print(string formatted)
+        public static void print(string formatted, bool centered = false)
         {
+            if (centered)
+            {
+                string s = formatted.Replace("$lowerthan$", "$").Replace("$greaterthan$", "$");
+
+                int length = 0;
+                bool countChar = true;
+
+                foreach (char c in s)
+                {
+                    switch (c)
+                    {
+                        case '<':
+                            countChar = false;
+                            break;
+                        case '>':
+                            countChar = true;
+                            break;
+                        default:
+                            if (countChar) length++;
+                            break;
+                    }
+                }
+
+                Console.SetCursorPosition((Console.WindowWidth - length) / 2, Console.CursorTop);
+            }
+
             formatted = formatted.Replace("<", "<##");
             formatted = formatted.Replace(">", "##>");
 

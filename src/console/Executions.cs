@@ -182,21 +182,12 @@ namespace Terminal
 
         public Func<string?[], Fat, string> clsExecution = (args, fat) =>
         {
-            using (Process process = new Process())
-            {
-                process.StartInfo.FileName = "cmd.exe";
-                process.StartInfo.Arguments = @"/c cls";
-                process.StartInfo.UseShellExecute = false;
-                process.StartInfo.RedirectStandardOutput = false;
-                process.Start();
-            }
-            Thread.Sleep(100);
+            Console.Clear();
             return "";
         };
 
         public Func<string?[], Fat, string> echoExecution = (args, fat) =>
         {
-            Environment.Exit(0);
             return "";
         };
     }
