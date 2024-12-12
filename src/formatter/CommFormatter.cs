@@ -147,7 +147,7 @@ namespace Formatter
                             if (colorString.StartsWith("RGB("))
                             {
                                 colorString = colorString.Replace("RGB(", "").Replace(")##", "");
-                                string[] rgbStrings = colorString.Split(',');
+                                string[] rgbStrings = colorString.Split(',', ' ', StringSplitOptions.RemoveEmptyEntries);
                                 int[] rgb = new int[] { int.Parse(rgbStrings[0]), int.Parse(rgbStrings[1]), int.Parse(rgbStrings[2]) };
                                 format = format == null ? Rgb((byte)rgb[0], (byte)rgb[1], (byte)rgb[2]) : format.Rgb((byte)rgb[0], (byte)rgb[1], (byte)rgb[2]);
                             }

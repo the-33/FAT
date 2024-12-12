@@ -16,13 +16,10 @@ namespace Terminal
 
     public class ConsoleManager
     {
-        const string descPath = "../../../commands/"; // Carpeta donde estan los archivos de descripcion de los comandos
-        const string descFileType = ".comm"; // Extension de archivo de descripcion de los comandos
-
         public Dictionary<string, Command> path { get; }
         public Executions exec = new();
 
-        public ConsoleManager()
+        public ConsoleManager(string descPath, string descFileType)
         {
             // Para saber que hace cada comando consultar https://en.wikibooks.org/wiki/Linux_Guide/Linux_commands
             // O escribir "comando" --help en una maquina linux, si tienes windows consultar https://apps.microsoft.com/detail/9pdxgncfsczv?rtc=1&hl=es-es&gl=ES

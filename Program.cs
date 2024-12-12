@@ -8,14 +8,31 @@ using static Formatter.CommFormatter;
 using static Crayon.Output;
 using System.Runtime.InteropServices;
 using System.Reflection;
+using System.Drawing;
+using static Program;
 
 class Program
 {
     #region CONSTANTS
-    #pragma warning disable CS0162
-    const bool TEST_FAT = false; // Poner a verdadero para hacer tests a la fat
 
-    // Cosas para que se abra a pantalla completa, la aplicacion pide permisos de administrador
+    /*
+     * Estas son las constantes que modifican los parametros del programa
+     * Aqui estan los valores por defecto, para cambiar estos valores ir a la carpeta 'conf'
+     */
+
+    private const string CONF_PATH = "../../../conf/"; // Ubicacion de la carpeta de configuraciones
+
+    // General
+    #pragma warning disable CS0162
+    private static bool TEST_FAT = false; // Para testear la FAT
+    // FAT
+    private static int CLUSTER_SIZE = 1024;
+    private static string FAT_COPY_PATH = "";
+    // Console Manager
+    private static string COMMAND_DESCRIPTION_PATH = "../../../commands/"; // Carpeta donde estan los archivos de descripcion de los comandos
+    private static string COMMAND_DESCRIPTION_EXTENSION = ".comm"; // Extension de archivo de descripcion de los comandos
+
+    // Cosas para que se abra a pantalla completa, la aplicacion pide permisos de administrador NO SE PUEDEN CAMBIAR
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern IntPtr GetConsoleWindow();
     [DllImport("user32.dll")]
@@ -23,32 +40,68 @@ class Program
     private const int SW_MAXIMIZE = 3;
 
     // Menu principal
-    static public string[] TITLE = 
+    private static string[] TITLE = Array.Empty<string>();
+    private static int TITLE_VERTICAL_OFFSET = 0;
+    private static int TITLE_RAINBOW_DISPLACEMENT_INCREMENT = 0;
+    private static string[] MENU_OPTIONS = Array.Empty<string>();
+    private static string MENU_MESSAGE = "";
+    private static int MENU_HORIZONTAL_OFFSET = 0;
+    private static int MENU_VERTICAL_OFFSET = 0;
+    private static string MENU_BOTTOM_MESSAGE = "";
+    private static string MENU_SELECTION_ARROW_COLOR = "WHITE";
+
+    // Trackear el raton
+    [DllImport("user32.dll")]
+    public static extern bool GetCursorPos(out POINT lpPoint);
+
+    public struct POINT
     {
-    "<rainbow> ________ ___  ___       _______           ________  ___       ___       ________  ________  ________  _________  ___  ________  ________           _________  ________  ________  ___       _______      </rainbow>",
-    "<rainbow displacement=2>|\\  _____\\\\  \\|\\  \\     |\\  ___ \\         |\\   __  \\|\\  \\     |\\  \\     |\\   __  \\|\\   ____\\|\\   __  \\|\\___   ___\\\\  \\|\\   __  \\|\\   ___  \\        |\\___   ___\\\\   __  \\|\\   __  \\|\\  \\     |\\  ___ \\     </rainbow>",
-    "<rainbow displacement=4>\\ \\  \\__/\\ \\  \\ \\  \\    \\ \\   __/|        \\ \\  \\|\\  \\ \\  \\    \\ \\  \\    \\ \\  \\|\\  \\ \\  \\___|\\ \\  \\|\\  \\|___ \\  \\_\\ \\  \\ \\  \\|\\  \\ \\  \\\\ \\  \\       \\|___ \\  \\_\\ \\  \\|\\  \\ \\  \\|\\ /\\ \\  \\    \\ \\   __/|    </rainbow>",
-    "<rainbow displacement=6> \\ \\   __\\\\ \\  \\ \\  \\    \\ \\  \\_|/__       \\ \\   __  \\ \\  \\    \\ \\  \\    \\ \\  \\\\\\  \\ \\  \\    \\ \\   __  \\   \\ \\  \\ \\ \\  \\ \\  \\\\\\  \\ \\  \\\\ \\  \\           \\ \\  \\ \\ \\   __  \\ \\   __  \\ \\  \\    \\ \\  \\_|/__  </rainbow>",
-    "<rainbow displacement=8>  \\ \\  \\_| \\ \\  \\ \\  \\____\\ \\  \\_|\\ \\       \\ \\  \\ \\  \\ \\  \\____\\ \\  \\____\\ \\  \\\\\\  \\ \\  \\____\\ \\  \\ \\  \\   \\ \\  \\ \\ \\  \\ \\  \\\\\\  \\ \\  \\\\ \\  \\           \\ \\  \\ \\ \\  \\ \\  \\ \\  \\|\\  \\ \\  \\____\\ \\  \\_|\\ \\ </rainbow>",
-    "<rainbow displacement=10>   \\ \\__\\   \\ \\__\\ \\_______\\ \\_______\\       \\ \\__\\ \\__\\ \\_______\\ \\_______\\ \\_______\\ \\_______\\ \\__\\ \\__\\   \\ \\__\\ \\ \\__\\ \\_______\\ \\__\\\\ \\__\\           \\ \\__\\ \\ \\__\\ \\__\\ \\_______\\ \\_______\\ \\_______\\</rainbow>",
-    "<rainbow displacement=12>    \\|__|    \\|__|\\|_______|\\|_______|        \\|__|\\|__|\\|_______|\\|_______|\\|_______|\\|_______|\\|__|\\|__|    \\|__|  \\|__|\\|_______|\\|__| \\|__|            \\|__|  \\|__|\\|__|\\|_______|\\|_______|\\|_______|</rainbow>"
-    };
+        public int X;
+        public int Y;
+    }
 
-    public const int TITLE_VERTICAL_OFFSET = 10;
+    [DllImport("user32.dll")]
+    public static extern short GetAsyncKeyState(int vKey);
 
-    static public string[] MENU_OPTIONS =
+    const int VK_LBUTTON = 0x01;
+
+    // Desactivar el modo quick edit
+    [DllImport("kernel32.dll")]
+    static extern IntPtr GetStdHandle(int nStdHandle);
+
+    [DllImport("kernel32.dll")]
+    static extern bool GetConsoleMode(IntPtr hConsoleHandle, out uint lpMode);
+
+    [DllImport("kernel32.dll")]
+    static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
+
+    const int STD_INPUT_HANDLE = -10;
+    const uint ENABLE_QUICK_EDIT_MODE = 0x0040;
+    const uint ENABLE_EXTENDED_FLAGS = 0x0080;
+
+    // Desactivar los botones
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetSystemMenu(IntPtr hWnd, bool bRevert);
+
+    [DllImport("user32.dll")]
+    private static extern bool DeleteMenu(IntPtr hMenu, uint uPosition, uint uFlags);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool SetConsoleDisplayMode(IntPtr hConsoleOutput, uint dwFlags, out COORD lpNewScreenBufferDimensions);
+
+    private const int STD_OUTPUT_HANDLE = -11;
+    private const uint SC_CLOSE = 0xF060;
+    private const uint MF_BYCOMMAND = 0x00000000;
+    private const uint SC_MINIMIZE = 0xF020;
+    private const uint SC_MAXIMIZE = 0xF030;
+    private const uint CONSOLE_FULLSCREEN_MODE = 1;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct COORD
     {
-        "START CONSOLE",
-        "SHOW FAT METADATA",
-        "EXIT"
-    };
-
-    public const string MENU_MESSAGE = "SELECT OPTION USING THE ARROW KEYS";
-
-    public const int MENU_HORIZONTAL_OFFSET = 0;
-    public const int MENU_VERTICAL_OFFSET = -5;
-
-    public const string MENU_BOTTOM_MESSAGE = "press ENTER to confirm option";
+        public short X;
+        public short Y;
+    }
     #endregion
 
     public static void Main(string[] args)
@@ -62,23 +115,41 @@ class Program
         // No tocar esta region, importante para que la aplicacion funcione bien
         Console.OutputEncoding = System.Text.Encoding.UTF8; // Cambia el encoding de texto para admitir mas caracteres, ermite que se dibujen los emojis
 
-        // Cosas inicia la aplicacion en pantalla completa
+        // Iniciar la aplicacion en pantalla completa
         IntPtr consoleHandle = GetConsoleWindow();
         if (consoleHandle != IntPtr.Zero)
         {
             ShowWindow(consoleHandle, SW_MAXIMIZE);
         }
+
+        // Desactivar los botones de cerrar, minimizar y poner en ventana
+        IntPtr consoleWindow = GetConsoleWindow();
+        IntPtr systemMenu = GetSystemMenu(consoleWindow, false);
+        DeleteMenu(systemMenu, SC_CLOSE, MF_BYCOMMAND);
+        DeleteMenu(systemMenu, SC_MINIMIZE, MF_BYCOMMAND);
+        //DeleteMenu(systemMenu, SC_MAXIMIZE, MF_BYCOMMAND);
+
+        // Desactivar el modo quick edit
+        IntPtr handle = GetStdHandle(STD_INPUT_HANDLE);
+        uint mode;
+        if (GetConsoleMode(handle, out mode))
+        {
+            mode &= ~ENABLE_QUICK_EDIT_MODE;
+            mode |= ENABLE_EXTENDED_FLAGS;
+            SetConsoleMode(handle, mode);
+        }
+
+        loadConfiguration();
+        Fat fat = new(CLUSTER_SIZE, FAT_COPY_PATH); // Memoria FAT
         #endregion
 
-        if (TEST_FAT) { fatTest(); }
-        else { mainMenu(); }
+        if (TEST_FAT) { fatTest(fat); }
+        else { mainMenu(fat); }
     }
 
     #region MAIN_METHODS
-    static void fatTest()
+    static void fatTest(Fat testFat)
     {
-        Fat testFat = new();
-
         testFat.addDirectory("holamundo", "C://");
         testFat.addFile("jsjs.txt", "C://holamundo");
         testFat.writeToFile("jsjs.txt", "C://holamundo", "aksdfjslkfjslfkjsflksjflksjdflsdkjfsfjsfl\nsdfksfksjflsjdfsjfslfjsJAJAJAJ");
@@ -95,7 +166,7 @@ class Program
         return;
     }
 
-    static void mainMenu(int selected = 0)
+    static void mainMenu(Fat fat, int selected = 0)
     {
         Console.Clear();
         Console.CursorVisible = false;
@@ -108,41 +179,58 @@ class Program
 
         PrintMenu(MENU_OPTIONS, selected, MENU_MESSAGE, MENU_HORIZONTAL_OFFSET, MENU_VERTICAL_OFFSET, MENU_BOTTOM_MESSAGE); // Para cambiar lo que muestra el menu hacerlo desde la region 'CONSTANTS'
 
-        ConsoleKey keyPress;
+        ConsoleKey? keyPress = null;
+        int mousePress = 0;
 
         do
         {
-            keyPress = System.Console.ReadKey(true).Key;
+            Console.SetCursorPosition(Console.WindowLeft, Console.WindowTop);
+            GetCursorPos(out POINT point);
+            Console.Write(Dim().Text($"Mouse Position: X={point.X}, Y={point.Y}          "));
+            mousePress = (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
+            Console.SetCursorPosition(Console.WindowLeft, Console.WindowTop+1);
+            if (mousePress != 0) Console.Write("Click");
+
+            if (System.Console.KeyAvailable) keyPress = System.Console.ReadKey(true).Key;
 
             if(keyPress == ConsoleKey.DownArrow)
             {
-                if (selected+1 < MENU_OPTIONS.Length) selected++;
+                if (selected+1 < MENU_OPTIONS.Length)
+                {
+                    selected++;
+                }
+                keyPress = null;
                 PrintMenu(MENU_OPTIONS, selected, MENU_MESSAGE, MENU_HORIZONTAL_OFFSET, MENU_VERTICAL_OFFSET, MENU_BOTTOM_MESSAGE);
             }
             else if (keyPress == ConsoleKey.UpArrow)
             {
-                if (selected-1 >= 0) selected--;
+                if (selected - 1 >= 0)
+                {
+                    selected--;
+                }
+                keyPress = null;
                 PrintMenu(MENU_OPTIONS, selected, MENU_MESSAGE, MENU_HORIZONTAL_OFFSET, MENU_VERTICAL_OFFSET, MENU_BOTTOM_MESSAGE);
             }
         }
-        while (keyPress != ConsoleKey.Enter);
+        while (keyPress != ConsoleKey.Enter && (mousePress == 0));
 
         switch(selected)
         {
+            case 0: consoleEnvironment(fat); break;
             default: break;
         }
 
         Console.Clear();
     }
 
-    static void consoleEnvironment()
+    static void consoleEnvironment(Fat fat)
     {
+        Console.Clear();
         Console.CursorVisible = true;
 
         // CONSOLE ENVIRONMENT
         string? command; // String para guardar el comando que el usuario escriba
-        ConsoleManager cM = new(); // Clase para gestionar los comandos
-        Fat fat = new(); // Memoria FAT
+        ConsoleManager cM = new(COMMAND_DESCRIPTION_PATH, COMMAND_DESCRIPTION_EXTENSION); // Clase para gestionar los comandos
 
         string? workingDirectory = "C:/", userName, computerName;
 
@@ -252,11 +340,130 @@ class Program
         {
             Console.SetCursorPosition(((Console.WindowWidth - (width-6)) / 2) + hOffset, Console.CursorTop + 1);
             if (i != selected) Console.Write("  " + options[i]);
-            else Console.Write(Bold().Red().Text("> ") + Reversed().Text(options[i]));
+            else
+            {
+                string color = MENU_SELECTION_ARROW_COLOR;
+                switch (color)
+                {
+                    case "BLACK": Console.Write(Black().Bold().Text("> ") + Reversed().Text(options[i])); break;
+                    case "RED": Console.Write(Red().Bold().Text("> ") + Reversed().Text(options[i])); break;
+                    case "GREEN": Console.Write(Green().Bold().Text("> ") + Reversed().Text(options[i])); break;
+                    case "YELLOW": Console.Write(Yellow().Bold().Text("> ") + Reversed().Text(options[i])); break;
+                    case "BLUE": Console.Write(Blue().Bold().Text("> ") + Reversed().Text(options[i])); break;
+                    case "MAGENTA": Console.Write(Magenta().Bold().Text("> ") + Reversed().Text(options[i])); break;
+                    case "CYAN": Console.Write(Cyan().Bold().Text("> ") + Reversed().Text(options[i])); break;
+                    case "WHITE": Console.Write(White().Bold().Text("> ") + Reversed().Text(options[i])); break;
+                    default:
+                        if (color.StartsWith("RGB("))
+                        {
+                            color = color.Replace("RGB(", "").Replace(")", "");
+                            string[] rgbStrings = color.Split( ',', ' ', StringSplitOptions.RemoveEmptyEntries);
+                            int[] rgb = new int[] { int.Parse(rgbStrings[0]), int.Parse(rgbStrings[1]), int.Parse(rgbStrings[2]) };
+                            Console.Write(Rgb((byte)rgb[0], (byte)rgb[1], (byte)rgb[2]).Bold().Text("> ") + Reversed().Text(options[i]));
+                        }
+                        break;
+                }
+            }
         }
 
         Console.SetCursorPosition(((Console.WindowWidth - bottomMessage.Length)/2) + hOffset, Console.CursorTop + 4);
         Console.Write(Dim().Text(bottomMessage));
+    }
+
+    static void loadConfiguration()
+    {
+        // General
+        using (StreamReader sr = new StreamReader(CONF_PATH + "GENERAL"))
+        {
+            string? line;
+            while ((line = sr.ReadLine()) != null)
+            {
+                string[] configuration = line.Split(" : ");
+
+                switch(configuration[0])
+                {
+                    case "TEST_FAT":
+                        TEST_FAT = (configuration[1] == "true");
+                        break;
+                    case "CLUSTER_SIZE":
+                        CLUSTER_SIZE = int.Parse(configuration[1]);
+                        break;
+                    case "FAT_COPY_PATH":
+                        FAT_COPY_PATH = configuration[1];
+                        break;
+                    case "COMMAND_DESCRIPTION_PATH":
+                        COMMAND_DESCRIPTION_PATH = configuration[1];
+                        break;
+                    case "COMMAND_DESCRIPTION_EXTENSION":
+                        COMMAND_DESCRIPTION_EXTENSION = configuration[1];
+                        break;
+                }
+            }
+            sr.Close();
+        }
+
+        // Main menu general
+        using (StreamReader sr = new StreamReader(CONF_PATH + "MAIN_MENU_GENERAL"))
+        {
+            string? line;
+            while ((line = sr.ReadLine()) != null)
+            {
+                string[] configuration = line.Split(" : ");
+
+                switch (configuration[0])
+                {
+                    case "TITLE_VERTICAL_OFFSET":
+                        TITLE_VERTICAL_OFFSET = int.Parse(configuration[1]);
+                        break;
+                    case "MENU_MESSAGE":
+                        MENU_MESSAGE = configuration[1];
+                        break;
+                    case "MENU_HORIZONTAL_OFFSET":
+                        MENU_HORIZONTAL_OFFSET = int.Parse(configuration[1]);
+                        break;
+                    case "MENU_VERTICAL_OFFSET":
+                        MENU_VERTICAL_OFFSET = int.Parse(configuration[1]);
+                        break;
+                    case "MENU_BOTTOM_MESSAGE":
+                        MENU_BOTTOM_MESSAGE = configuration[1];
+                        break;
+                    case "TITLE_RAINBOW_DISPLACEMENT_INCREMENT":
+                        TITLE_RAINBOW_DISPLACEMENT_INCREMENT = int.Parse(configuration[1]);
+                        break;
+                    case "MENU_SELECTION_ARROW_COLOR":
+                        MENU_SELECTION_ARROW_COLOR = configuration[1];
+                        break;
+                }
+            }
+            sr.Close();
+        }
+
+        // Main menu title
+        using (StreamReader sr = new StreamReader(CONF_PATH + "MAIN_MENU_TITLE"))
+        {
+            string? line;
+            List<string> title = new();
+            int displacement = TITLE_RAINBOW_DISPLACEMENT_INCREMENT;
+            while ((line = sr.ReadLine()) != null)
+            {
+                title.Add("<rainbow displacement=" + displacement + ">" + line + "</rainbow>");
+            }
+            TITLE = title.ToArray();
+            sr.Close();
+        }
+
+        // Main menu options
+        using (StreamReader sr = new StreamReader(CONF_PATH + "MAIN_MENU_OPTIONS"))
+        {
+            string? line;
+            List<string> options = new();
+            while ((line = sr.ReadLine()) != null)
+            {
+                options.Add(line);
+            }
+            MENU_OPTIONS = options.ToArray();
+            sr.Close();
+        }
     }
     #endregion
 }

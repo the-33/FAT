@@ -8,7 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using FAT;
-using static FAT.Fat;
+using static Crayon.Output;
 
 namespace Terminal
 {
@@ -176,6 +176,7 @@ namespace Terminal
 
         public Func<string?[], Fat, string> exitExecution = (args, fat) =>
         {
+            Console.WriteLine(Dim().Text("Exiting..."));
             Environment.Exit(0);
             return "";
         };

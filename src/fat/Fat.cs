@@ -34,7 +34,7 @@ namespace FAT
 
     public class Fat
     {
-        const int clusterSize = 30;
+        int clusterSize;
 
         private struct Metadata
         {
@@ -129,10 +129,11 @@ namespace FAT
         private Metadata metadata;
         private Data data;
 
-        public Fat(string fatCopyPath = "")
+        public Fat(int clusterSize, string fatCopyPath)
         {
             metadata = new Metadata(fatCopyPath);
             data = new Data();
+            this.clusterSize = clusterSize;
         }
 
         public void showMetadata()
