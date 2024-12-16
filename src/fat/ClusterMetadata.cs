@@ -7,32 +7,32 @@ using FAT.Data;
 
 namespace FAT.MetaData
 {
-    internal class ClusterMetadata
+    public class ClusterMetadata
     {
-        public bool Available {  get; set; }
-        private bool Damaged;
-        private bool Reserved;
-        public int Next {  get; set; }
-        public bool End { get; set; }
+        public bool available {  get; set; }
+        public bool damaged { get; set; }
+        public bool reserved {get; set;}
+        public int next {  get; set; }
+        public bool end { get; set; }
 
         public ClusterMetadata(bool available = true, int next = -1, bool end = false) 
         { 
-            this.Available = available;
-            this.Next = next;
-            this.End = end;
-            Damaged = false;
-            Reserved = false;
+            this.available = available;
+            this.next = next;
+            this.end = end;
+            damaged = false;
+            reserved = false;
         }
 
         public override string ToString()
         {
-            char availableChar = (Available) ? 'T' : 'F';
-            char damagedChar = (Damaged) ? 'T' : 'F';
-            char reservedChar = (Reserved) ? 'T' : 'F';
-            char endChar = (End) ? 'T' : 'F';
+            char availableChar = (available) ? 'T' : 'F';
+            char damagedChar = (damaged) ? 'T' : 'F';
+            char reservedChar = (reserved) ? 'T' : 'F';
+            char endChar = (end) ? 'T' : 'F';
 
             string returnStr = "{ Avaliable: " + availableChar + "\tDamaged: " + damagedChar + "\tReserved: " + reservedChar + "\tNext: ";
-            if (Next != -1) returnStr += "Cluster " + Next;
+            if (next != -1) returnStr += "Cluster " + next;
             else returnStr += "NULL";
             returnStr += "\tEnd: " + endChar + " }";
 

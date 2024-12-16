@@ -34,21 +34,19 @@ namespace FAT
 
     public class Fat
     {
-        int clusterSize;
-
-        private struct Metadata
+        public struct Metadata
         {
-            BootCode BootCode { get; set; }
-            public string FatCopyPath {  get; set; }
-            public List<ClusterMetadata> Clusters { get; set; }
-            public RootDirectory RootDirectory { get; set; }
+            public BootCode bootCode { get; set; }
+            public string fatCopyPath {  get; set; }
+            public List<ClusterMetadata> clusters { get; set; }
+            public RootDirectory rootDirectory { get; set; }
 
             public Metadata(string fatCopyPath = "")
             {
-                BootCode = new BootCode();
-                this.FatCopyPath = fatCopyPath;
-                Clusters = new List<ClusterMetadata>();
-                RootDirectory = new RootDirectory();
+                bootCode = new BootCode();
+                this.fatCopyPath = fatCopyPath;
+                clusters = new List<ClusterMetadata>();
+                rootDirectory = new RootDirectory();
             }
 
             public override string ToString()
@@ -66,17 +64,17 @@ namespace FAT
                     StreamReader reader = process.StandardOutput;
                     string output = reader.ReadToEnd();
 
-                    fullFatCopyPath = output.Replace("\n", "") + "/" + FatCopyPath;
+                    fullFatCopyPath = output.Replace("\n", "") + "/" + fatCopyPath;
                 }
 
                 string returnStr = "";
 
-                returnStr += "[Boot Code]\n\n" + BootCode + "\n\n";
+                returnStr += "[Boot Code]\n\n" + bootCode + "\n\n";
                 returnStr += "[Fat Copy Path] " + fullFatCopyPath + "\n\n";
                 returnStr += "[Clusters]\n\n";
 
                 int i = 0;
-                foreach(ClusterMetadata c in Clusters)
+                foreach(ClusterMetadata c in clusters)
                 {
                     returnStr += "Cluster " + i + ": " + c + "\n";
                     i++;
@@ -86,48 +84,49 @@ namespace FAT
 
                 returnStr += "[Root Directory]\n\nName\t\tType\tStarting Cluster\n----\t\t----\t----------------\n\n";
 
-                foreach(Entry e in RootDirectory.Entries)
+                foreach(Entry e in rootDirectory.entries)
                 {
-                    if(e.Type != "") returnStr += e.Name + "\t\t" + e.Type + "\t" + e.StartingCluster + "\n";
-                    else returnStr += e.Name + "\t\tDIR\t" + e.StartingCluster + "\n";
+                    if(e.type != "") returnStr += e.name + "\t\t" + e.type + "\t" + e.startingCluster + "\n";
+                    else returnStr += e.name + "\t\tDIR\t" + e.startingCluster + "\n";
                 }
 
                 return returnStr;
             }
         };
 
-        private struct Data
+        public struct Data
         {
-            public List<Cluster> Clusters { get; set; }
+            public List<Cluster> clusters { get; set; }
 
             public Data()
             {
-                Clusters = new List<Cluster>();
+                clusters = new List<Cluster>();
             }
         };
 
         public struct Entry
         {
-            public string Name { get; set; }
-            public string Type { get; set; }
-            public int StartingCluster { get; set; }
+            public string name { get; set; }
+            public string type { get; set; }
+            public int startingCluster { get; set; }
 
             public Entry(string name, string type, int startingCluster)
             {
-                this.Name = name;
-                this.Type = type;
-                this.StartingCluster = startingCluster;
+                this.name = name;
+                this.type = type;
+                this.startingCluster = startingCluster;
             }
 
             public override string ToString()
             {
-                if (Type == "") return "📁 " + Name;
-                else return "📄 " + Name + "." + Type;
+                if (type == "") return "📁 " + name;
+                else return "📄 " + name + "." + type;
             }
         };
 
-        private Metadata metadata;
-        private Data data;
+        public int clusterSize { get; set; }
+        public Metadata metadata { get; set; }
+        public Data data { get; set; }
 
         public Fat(int clusterSize, string fatCopyPath)
         {
@@ -151,12 +150,12 @@ namespace FAT
             {
                 if (routing.Length > 0)
                 {
-                    cluster = metadata.RootDirectory.Entries.IndexOf(metadata.RootDirectory.Entries.Find(e => e.Name == routing[0]));
+                    cluster = metadata.rootDirectory.entries.IndexOf(metadata.rootDirectory.entries.Find(e => e.name == routing[0]));
                     if (cluster == -1) throw new Exception(Bold().Red().Text("Could not find " + path + "\n"));
                     for (int i = 1; i < routing.Length; i++)
                     {
-                        FAT.Data.Directory d = (FAT.Data.Directory)data.Clusters[cluster];
-                        cluster = d.Entries.IndexOf(d.Entries.Find(e => e.Name == routing[i]));
+                        FAT.Data.Directory d = (FAT.Data.Directory)data.clusters[cluster];
+                        cluster = d.entries.IndexOf(d.entries.Find(e => e.name == routing[i]));
                         if (cluster == -1) throw new Exception(Bold().Red().Text("Could not find " + path + "\n"));
                     }
                 }
@@ -172,29 +171,29 @@ namespace FAT
 
         public bool addDirectory(string name, string path)
         {
-            ClusterMetadata? cluster = metadata.Clusters.Find(x => x.Available == true);
+            ClusterMetadata? cluster = metadata.clusters.Find(x => x.available == true);
 
             if (cluster == null)
             {
                 cluster = new ClusterMetadata();
-                metadata.Clusters.Add(cluster);
-                data.Clusters.Add(new FAT.Data.Directory());
+                metadata.clusters.Add(cluster);
+                data.clusters.Add(new FAT.Data.Directory());
             }
             else
             {
-                data.Clusters[metadata.Clusters.IndexOf(cluster)] = new FAT.Data.Directory();
+                data.clusters[metadata.clusters.IndexOf(cluster)] = new FAT.Data.Directory();
             }
 
-            cluster.Available = false;
-            cluster.End = true;
-            cluster.Next = -1;
+            cluster.available = false;
+            cluster.end = true;
+            cluster.next = -1;
 
             int directoryCluster = findDirectoryCluster(path);
 
             if (directoryCluster == -2) return false;
 
-            if (directoryCluster == -1) metadata.RootDirectory.Entries.Add(new Entry(name, "", metadata.Clusters.IndexOf(cluster)));
-            else ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Add(new Entry(name, "", metadata.Clusters.IndexOf(cluster)));
+            if (directoryCluster == -1) metadata.rootDirectory.entries.Add(new Entry(name, "", metadata.clusters.IndexOf(cluster)));
+            else ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Add(new Entry(name, "", metadata.clusters.IndexOf(cluster)));
             
             return true;
         }
@@ -208,36 +207,36 @@ namespace FAT
 
             if(name != "")
             {
-                if (directoryCluster == -1) cluster = metadata.RootDirectory.Entries.Find(x => x.Name == name).StartingCluster;
-                else cluster = ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Find(x => x.Name == name).StartingCluster;
+                if (directoryCluster == -1) cluster = metadata.rootDirectory.entries.Find(x => x.name == name).startingCluster;
+                else cluster = ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Find(x => x.name == name).startingCluster;
 
-                foreach (Entry e in ((FAT.Data.Directory)data.Clusters[cluster]).Entries)
+                foreach (Entry e in ((FAT.Data.Directory)data.clusters[cluster]).entries)
                 {
-                    if (e.Type == "") removeDirectory(path + "/" + name, e.Name);
-                    else removeFile(path + "/" + name, e.Name + "." + e.Type);
+                    if (e.type == "") removeDirectory(path + "/" + name, e.name);
+                    else removeFile(path + "/" + name, e.name + "." + e.type);
                 }
 
-                if (directoryCluster == -1) metadata.RootDirectory.Entries.Remove(metadata.RootDirectory.Entries.Find(x => x.StartingCluster == cluster));
-                else ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Remove(((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Find(x => x.StartingCluster == cluster));
+                if (directoryCluster == -1) metadata.rootDirectory.entries.Remove(metadata.rootDirectory.entries.Find(x => x.startingCluster == cluster));
+                else ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Remove(((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Find(x => x.startingCluster == cluster));
 
-                metadata.Clusters[cluster].Available = true;
+                metadata.clusters[cluster].available = true;
             }
             else
             {
                 if (directoryCluster == -1)
                 {
-                    foreach (Entry e in metadata.RootDirectory.Entries)
+                    foreach (Entry e in metadata.rootDirectory.entries)
                     {
-                        if (e.Type == "") removeDirectory(path + "/" + name, e.Name);
-                        else removeFile(path + "/" + name, e.Name + "." + e.Type);
+                        if (e.type == "") removeDirectory(path + "/" + name, e.name);
+                        else removeFile(path + "/" + name, e.name + "." + e.type);
                     }
                 }
                 else
                 {
-                    foreach (Entry e in ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries)
+                    foreach (Entry e in ((FAT.Data.Directory)data.clusters[directoryCluster]).entries)
                     {
-                        if (e.Type == "") removeDirectory(path + "/" + name, e.Name);
-                        else removeFile(path + "/" + name, e.Name + "." + e.Type);
+                        if (e.type == "") removeDirectory(path + "/" + name, e.name);
+                        else removeFile(path + "/" + name, e.name + "." + e.type);
                     }
                 }
             }
@@ -257,17 +256,17 @@ namespace FAT
 
             if (directoryCluster == -1)
             {
-                directoryEntry = metadata.RootDirectory.Entries.Find(x => x.Name == name);
-                metadata.RootDirectory.Entries.Remove(directoryEntry);
+                directoryEntry = metadata.rootDirectory.entries.Find(x => x.name == name);
+                metadata.rootDirectory.entries.Remove(directoryEntry);
             }
             else
             {
-                directoryEntry = ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Find(x => x.Name == name);
-                ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Remove(directoryEntry);
+                directoryEntry = ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Find(x => x.name == name);
+                ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Remove(directoryEntry);
             }
 
-            if (newDirectoryCluster == -1) metadata.RootDirectory.Entries.Add(new Entry(newName, "", directoryEntry.StartingCluster));
-            else ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Add(new Entry(newName, "", directoryEntry.StartingCluster));
+            if (newDirectoryCluster == -1) metadata.rootDirectory.entries.Add(new Entry(newName, "", directoryEntry.startingCluster));
+            else ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Add(new Entry(newName, "", directoryEntry.startingCluster));
 
             return true;
         }
@@ -293,10 +292,10 @@ namespace FAT
                 return false;
             }
 
-            foreach (Entry e in ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries)
+            foreach (Entry e in ((FAT.Data.Directory)data.clusters[directoryCluster]).entries)
             {
-                if (e.Type == "") copyDirectory(path + "/" + name, e.Name, newPath + "/" + newName, e.Name);
-                else copyFile(path + "/" + name, e.Name, newPath + "/" + newName, e.Name);
+                if (e.type == "") copyDirectory(path + "/" + name, e.name, newPath + "/" + newName, e.name);
+                else copyFile(path + "/" + name, e.name, newPath + "/" + newName, e.name);
             }
 
             return true;
@@ -308,8 +307,8 @@ namespace FAT
 
             if (directoryCluster == -2) return "";
 
-            if (directoryCluster == -1) return metadata.RootDirectory.ToString();
-            else return ((FAT.Data.Directory)data.Clusters[directoryCluster]).ToString();
+            if (directoryCluster == -1) return metadata.rootDirectory.ToString();
+            else return ((FAT.Data.Directory)data.clusters[directoryCluster]).ToString();
         }
 
         public bool addFile(string name, string path)
@@ -321,25 +320,25 @@ namespace FAT
 
             if (directoryCluster == -2) return false;
 
-            ClusterMetadata? cluster = metadata.Clusters.Find(x => x.Available == true);
+            ClusterMetadata? cluster = metadata.clusters.Find(x => x.available == true);
 
             if (cluster == null)
             {
                 cluster = new ClusterMetadata();
-                metadata.Clusters.Add(cluster);
-                data.Clusters.Add(new FAT.Data.File(clusterSize));
+                metadata.clusters.Add(cluster);
+                data.clusters.Add(new FAT.Data.File(clusterSize));
             }
             else
             {
-                data.Clusters[metadata.Clusters.IndexOf(cluster)] = new FAT.Data.File(clusterSize);
+                data.clusters[metadata.clusters.IndexOf(cluster)] = new FAT.Data.File(clusterSize);
             }
 
-            cluster.Available = false;
-            cluster.End = true;
-            cluster.Next = -1;
+            cluster.available = false;
+            cluster.end = true;
+            cluster.next = -1;
 
-            if (directoryCluster == -1) metadata.RootDirectory.Entries.Add(new Entry(fileName, fileType, metadata.Clusters.IndexOf(cluster)));
-            else ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Add(new Entry(fileName, fileType, metadata.Clusters.IndexOf(cluster)));
+            if (directoryCluster == -1) metadata.rootDirectory.entries.Add(new Entry(fileName, fileType, metadata.clusters.IndexOf(cluster)));
+            else ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Add(new Entry(fileName, fileType, metadata.clusters.IndexOf(cluster)));
 
             return true;
         }
@@ -355,8 +354,8 @@ namespace FAT
 
             if (directoryCluster == -2) return false;
 
-            if (directoryCluster == -1) cluster = metadata.RootDirectory.Entries.Find(x => x.Name == fileName && x.Type == fileType).StartingCluster;
-            else cluster = ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Find(x => x.Name == fileName && x.Type == fileType).StartingCluster;
+            if (directoryCluster == -1) cluster = metadata.rootDirectory.entries.Find(x => x.name == fileName && x.type == fileType).startingCluster;
+            else cluster = ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Find(x => x.name == fileName && x.type == fileType).startingCluster;
 
             if (cluster == -1)
             {
@@ -364,16 +363,16 @@ namespace FAT
                 return false;
             }
 
-            while (!metadata.Clusters[cluster].End)
+            while (!metadata.clusters[cluster].end)
             {
-                metadata.Clusters[cluster].Available = true;
-                if (!metadata.Clusters[cluster].End) cluster = metadata.Clusters[cluster].Next;
+                metadata.clusters[cluster].available = true;
+                if (!metadata.clusters[cluster].end) cluster = metadata.clusters[cluster].next;
             }
 
-            metadata.Clusters[cluster].Available = true;
+            metadata.clusters[cluster].available = true;
 
-            if (directoryCluster == -1) metadata.RootDirectory.Entries.Remove(metadata.RootDirectory.Entries.Find(x => x.Name == fileName && x.Type == fileType));
-            else ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Remove(((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Find(x => x.Name == fileName && x.Type == fileType));
+            if (directoryCluster == -1) metadata.rootDirectory.entries.Remove(metadata.rootDirectory.entries.Find(x => x.name == fileName && x.type == fileType));
+            else ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Remove(((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Find(x => x.name == fileName && x.type == fileType));
 
             return true;
         }
@@ -395,17 +394,17 @@ namespace FAT
 
             if (directoryCluster == -1)
             {
-                fileEntry = metadata.RootDirectory.Entries.Find(x => x.Name == fileName && x.Type == fileType);
-                metadata.RootDirectory.Entries.Remove(fileEntry);
+                fileEntry = metadata.rootDirectory.entries.Find(x => x.name == fileName && x.type == fileType);
+                metadata.rootDirectory.entries.Remove(fileEntry);
             }
             else
             {
-                fileEntry = ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Find(x => x.Name == fileName && x.Type == fileType);
-                ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Remove(fileEntry);
+                fileEntry = ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Find(x => x.name == fileName && x.type == fileType);
+                ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Remove(fileEntry);
             }
 
-            if (newDirectoryCluster == -1) metadata.RootDirectory.Entries.Add(new Entry(newfileName, newfileType, fileEntry.StartingCluster));
-            else ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Add(new Entry(newfileName, newfileType, fileEntry.StartingCluster));
+            if (newDirectoryCluster == -1) metadata.rootDirectory.entries.Add(new Entry(newfileName, newfileType, fileEntry.startingCluster));
+            else ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Add(new Entry(newfileName, newfileType, fileEntry.startingCluster));
 
             return true;
         }
@@ -473,8 +472,8 @@ namespace FAT
 
             int cluster = -1;
 
-            if (directoryCluster == -1) cluster = metadata.RootDirectory.Entries.Find(x => x.Name == fileName && x.Type == fileType).StartingCluster;
-            else cluster = ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Find(x => x.Name == fileName && x.Type == fileType).StartingCluster;
+            if (directoryCluster == -1) cluster = metadata.rootDirectory.entries.Find(x => x.name == fileName && x.type == fileType).startingCluster;
+            else cluster = ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Find(x => x.name == fileName && x.type == fileType).startingCluster;
 
             if (cluster == -1)
             {
@@ -486,31 +485,31 @@ namespace FAT
 
             while (packets.Count > 0) 
             {
-                fileCluster = metadata.Clusters[cluster];
-                ((FAT.Data.File)data.Clusters[cluster]).Data = Encoding.UTF8.GetBytes(packets.Dequeue());
+                fileCluster = metadata.clusters[cluster];
+                ((FAT.Data.File)data.clusters[cluster]).data = Encoding.UTF8.GetBytes(packets.Dequeue());
 
-                fileCluster.Available = false;
+                fileCluster.available = false;
 
                 if(packets.Count > 0)
                 {
-                    ClusterMetadata? nextCluster = metadata.Clusters.Find(x => x.Available == true);
+                    ClusterMetadata? nextCluster = metadata.clusters.Find(x => x.available == true);
 
                     if(nextCluster == null)
                     {
                         nextCluster = new ClusterMetadata();
-                        metadata.Clusters.Add(nextCluster);
-                        data.Clusters.Add(new FAT.Data.File(clusterSize));
+                        metadata.clusters.Add(nextCluster);
+                        data.clusters.Add(new FAT.Data.File(clusterSize));
                     }
 
-                    fileCluster.Next = metadata.Clusters.IndexOf(nextCluster);
-                    fileCluster.End = false;
+                    fileCluster.next = metadata.clusters.IndexOf(nextCluster);
+                    fileCluster.end = false;
 
-                    cluster = fileCluster.Next;
+                    cluster = fileCluster.next;
                 }
                 else
                 {
-                    fileCluster.Next = -1;
-                    fileCluster.End = true;
+                    fileCluster.next = -1;
+                    fileCluster.end = true;
                 }
             }
 
@@ -529,16 +528,16 @@ namespace FAT
 
             if (directoryCluster == -2) return "";
 
-            if (directoryCluster == -1) cluster = metadata.RootDirectory.Entries.Find(x => x.Name == fileName && x.Type == fileType).StartingCluster;
-            else cluster = ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries.Find(x => x.Name == fileName && x.Type == fileType).StartingCluster;
+            if (directoryCluster == -1) cluster = metadata.rootDirectory.entries.Find(x => x.name == fileName && x.type == fileType).startingCluster;
+            else cluster = ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Find(x => x.name == fileName && x.type == fileType).startingCluster;
 
-            while (!metadata.Clusters[cluster].End)
+            while (!metadata.clusters[cluster].end)
             {
-                content += ((FAT.Data.File)data.Clusters[cluster]).ToString();
-                if(!metadata.Clusters[cluster].End) cluster = metadata.Clusters[cluster].Next;
+                content += ((FAT.Data.File)data.clusters[cluster]).ToString();
+                if(!metadata.clusters[cluster].end) cluster = metadata.clusters[cluster].next;
             }
 
-            content += ((FAT.Data.File)data.Clusters[cluster]).ToString();
+            content += ((FAT.Data.File)data.clusters[cluster]).ToString();
 
             return content;
         }

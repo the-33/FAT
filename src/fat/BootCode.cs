@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FAT.MetaData
 {
-    internal class BootCode
+    public class BootCode
     {
 
     }

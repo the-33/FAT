@@ -7,20 +7,20 @@ using FAT;
 
 namespace FAT.MetaData
 {
-    internal class RootDirectory
+    public class RootDirectory
     {
-        public List<Fat.Entry> Entries {  get; set; }
+        public List<Fat.Entry> entries {  get; set; }
 
         public RootDirectory()
         {
-            Entries = new List<Fat.Entry>();
+            entries = new List<Fat.Entry>();
         }
 
         public override string ToString()
         {
             string returnStr = "";
 
-            foreach (Fat.Entry e in Entries)
+            foreach (Fat.Entry e in entries)
             {
                 returnStr += e.ToString() + "\n";
             }

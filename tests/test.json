@@ -1,0 +1,82 @@
+{
+  "clusterSize": 30,
+  "metadata": {
+    "bootCode": {},
+    "fatCopyPath": "",
+    "clusters": [
+      {
+        "available": false,
+        "damaged": false,
+        "reserved": false,
+        "next": -1,
+        "end": true
+      },
+      {
+        "available": false,
+        "damaged": false,
+        "reserved": false,
+        "next": -1,
+        "end": true
+      },
+      {
+        "available": false,
+        "damaged": false,
+        "reserved": false,
+        "next": -1,
+        "end": true
+      },
+      {
+        "available": false,
+        "damaged": false,
+        "reserved": false,
+        "next": -1,
+        "end": true
+      }
+    ],
+    "rootDirectory": {
+      "entries": [
+        {
+          "name": "holamundo",
+          "type": "",
+          "startingCluster": 0
+        },
+        {
+          "name": "jjj",
+          "type": "bat",
+          "startingCluster": 2
+        },
+        {
+          "name": "jsjs",
+          "type": "txt",
+          "startingCluster": 1
+        }
+      ]
+    }
+  },
+  "data": {
+    "clusters": [
+      {
+        "$type": 1,
+        "entries": [
+          {
+            "name": "hey",
+            "type": "",
+            "startingCluster": 3
+          }
+        ]
+      },
+      {
+        "$type": 0,
+        "data": "aG9vbGE="
+      },
+      {
+        "$type": 0,
+        "data": "aG9vbGE="
+      },
+      {
+        "$type": 1,
+        "entries": []
+      }
+    ]
+  }
+}

@@ -1,4 +1,4 @@
-TEST_FAT : false
+TEST_FAT : true
 CLUSTER_SIZE : 30
 FAT_COPY_PATH : 
 COMMAND_DESCRIPTION_PATH : ../../../commands/

@@ -1,15 +1,20 @@
 ﻿using Crayon;
 using Terminal;
 using FAT;
+using FAT.Data;
+using FAT.MetaData;
 using System;
 using System.Data;
 using System.Diagnostics;
+using System.Windows;
 using static Formatter.CommFormatter;
 using static Crayon.Output;
 using System.Runtime.InteropServices;
 using System.Reflection;
 using System.Drawing;
 using static Program;
+using System.Management;
+using System.Text.Json;
 
 class Program
 {
@@ -49,6 +54,7 @@ class Program
     private static int MENU_VERTICAL_OFFSET = 0;
     private static string MENU_BOTTOM_MESSAGE = "";
     private static string MENU_SELECTION_ARROW_COLOR = "WHITE";
+    private static string MENU_TITLE_FORMAT = "white";
 
     // Trackear el raton
     [DllImport("user32.dll")]
@@ -113,7 +119,7 @@ class Program
 
         #region SETUP
         // No tocar esta region, importante para que la aplicacion funcione bien
-        Console.OutputEncoding = System.Text.Encoding.UTF8; // Cambia el encoding de texto para admitir mas caracteres, ermite que se dibujen los emojis
+        Console.OutputEncoding = System.Text.Encoding.UTF8; // Cambia el encoding de texto para admitir mas caracteres, permite que se dibujen los emojis
 
         // Iniciar la aplicacion en pantalla completa
         IntPtr consoleHandle = GetConsoleWindow();
@@ -140,7 +146,7 @@ class Program
         }
 
         loadConfiguration();
-        Fat fat = new(CLUSTER_SIZE, FAT_COPY_PATH); // Memoria FAT
+        Fat fat = new(CLUSTER_SIZE, ""); // Memoria FAT
         #endregion
 
         if (TEST_FAT) { fatTest(fat); }
@@ -150,18 +156,22 @@ class Program
     #region MAIN_METHODS
     static void fatTest(Fat testFat)
     {
-        testFat.addDirectory("holamundo", "C://");
-        testFat.addFile("jsjs.txt", "C://holamundo");
-        testFat.writeToFile("jsjs.txt", "C://holamundo", "aksdfjslkfjslfkjsflksjflksjdflsdkjfsfjsfl\nsdfksfksjflsjdfsjfslfjsJAJAJAJ");
-        testFat.writeToFile("jsjs.txt", "C://holamundo", "hoola", false);
-        testFat.writeToFile("jsjs.txt", "C://holamundo", "hoola");
-        Console.WriteLine(testFat.catFile("jsjs.txt", "C://holamundo"));
-        testFat.copyFile("C://holamundo", "jsjs.txt", "C://", "jjj.bat");
-        testFat.addDirectory("hey", "C://holamundo");
-        Console.WriteLine(testFat.listDirectory("C://holamundo"));
-        Console.WriteLine(testFat.listDirectory("C://"));
-        testFat.moveFile("C://holamundo", "jsjs.txt", "C://");
-        testFat.showMetadata();
+        testFat = loadFat("../../../tests/", "test");
+
+        //testFat.addDirectory("holamundo", "C://");
+        //testFat.addFile("jsjs.txt", "C://holamundo");
+        //testFat.writeToFile("jsjs.txt", "C://holamundo", "aksdfjslkfjslfkjsflksjflksjdflsdkjfsfjsfl\nsdfksfksjflsjdfsjfslfjsJAJAJAJ");
+        //testFat.writeToFile("jsjs.txt", "C://holamundo", "hoola", false);
+        //testFat.writeToFile("jsjs.txt", "C://holamundo", "hoola");
+        //Console.WriteLine(testFat.catFile("jsjs.txt", "C://holamundo"));
+        //testFat.copyFile("C://holamundo", "jsjs.txt", "C://", "jjj.bat");
+        //testFat.addDirectory("hey", "C://holamundo");
+        //Console.WriteLine(testFat.listDirectory("C://holamundo"));
+        //Console.WriteLine(testFat.listDirectory("C://"));
+        //testFat.moveFile("C://holamundo", "jsjs.txt", "C://");
+        //testFat.showMetadata();
+
+        //saveFat(testFat, "../../../tests/", "test");
 
         return;
     }
@@ -182,14 +192,18 @@ class Program
         ConsoleKey? keyPress = null;
         int mousePress = 0;
 
+        bool enableMouseInteraction = true;
+        bool exit = false;
+
         do
         {
-            Console.SetCursorPosition(Console.WindowLeft, Console.WindowTop);
-            GetCursorPos(out POINT point);
-            Console.Write(Dim().Text($"Mouse Position: X={point.X}, Y={point.Y}          "));
-            mousePress = (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
-            Console.SetCursorPosition(Console.WindowLeft, Console.WindowTop+1);
-            if (mousePress != 0) Console.Write("Click");
+            if(enableMouseInteraction)
+            {
+                Console.SetCursorPosition(Console.WindowLeft, Console.WindowTop);
+                GetCursorPos(out POINT point);
+                Console.Write(Dim().Text($"Mouse Position: X={point.X}, Y={point.Y}          "));
+                mousePress = (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
+            }
 
             if (System.Console.KeyAvailable) keyPress = System.Console.ReadKey(true).Key;
 
@@ -211,13 +225,16 @@ class Program
                 keyPress = null;
                 PrintMenu(MENU_OPTIONS, selected, MENU_MESSAGE, MENU_HORIZONTAL_OFFSET, MENU_VERTICAL_OFFSET, MENU_BOTTOM_MESSAGE);
             }
+            else if (keyPress == ConsoleKey.Enter) exit = true;
         }
-        while (keyPress != ConsoleKey.Enter && (mousePress == 0));
+        while (!exit);
 
         switch(selected)
         {
             case 0: consoleEnvironment(fat); break;
-            default: break;
+            case 1: showFatMetadata(fat); break;
+            case 2: saveFat(fat, "", ""); break;
+            default: Environment.Exit(0);  break;
         }
 
         Console.Clear();
@@ -260,6 +277,22 @@ class Program
         }
     }
     #endregion
+
+    static void showFatMetadata(Fat fat)
+    {
+        Console.Clear();
+        fat.showMetadata();
+        Console.WriteLine("Pulsa enter para volver...");
+
+        ConsoleKey? keyPress = null;
+        do
+        {
+            if (System.Console.KeyAvailable) keyPress = System.Console.ReadKey(true).Key;
+        }
+        while (keyPress != ConsoleKey.Enter);
+        Console.Clear();
+        mainMenu(fat);
+    }
 
     #region AUXILIARY METHODS
     static void CommandManager(string s, ConsoleManager cM, Fat fat)
@@ -433,6 +466,10 @@ class Program
                     case "MENU_SELECTION_ARROW_COLOR":
                         MENU_SELECTION_ARROW_COLOR = configuration[1];
                         break;
+                    case "MENU_TITLE_FORMAT":
+                        MENU_TITLE_FORMAT = configuration[1];
+                        break;
+
                 }
             }
             sr.Close();
@@ -443,11 +480,23 @@ class Program
         {
             string? line;
             List<string> title = new();
-            int displacement = TITLE_RAINBOW_DISPLACEMENT_INCREMENT;
-            while ((line = sr.ReadLine()) != null)
+            if(MENU_TITLE_FORMAT == "rainbow")
             {
-                title.Add("<rainbow displacement=" + displacement + ">" + line + "</rainbow>");
+                int displacement = 0;
+                while ((line = sr.ReadLine()) != null)
+                {
+                    title.Add("<rainbow displacement=" + displacement + ">" + line + "</rainbow>");
+                    displacement += TITLE_RAINBOW_DISPLACEMENT_INCREMENT;
+                }
             }
+            else
+            {
+                while ((line = sr.ReadLine()) != null)
+                {
+                    title.Add("<" + MENU_TITLE_FORMAT + ">" + line + "</" + MENU_TITLE_FORMAT + ">");
+                }
+            }
+            
             TITLE = title.ToArray();
             sr.Close();
         }
@@ -464,6 +513,22 @@ class Program
             MENU_OPTIONS = options.ToArray();
             sr.Close();
         }
+    }
+
+    static void saveFat(Fat fat, string path, string fileName)
+    {
+        Console.WriteLine();
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        string jsonString = JsonSerializer.Serialize(fat, options);
+
+        System.IO.File.WriteAllText(path + fileName + ".json", jsonString);
+    }
+
+    static Fat loadFat(string path, string fileName)
+    {
+        string jsonString = System.IO.File.ReadAllText(path + fileName + ".json");
+        Console.Write(jsonString);
+        return JsonSerializer.Deserialize<Fat>(jsonString)!;
     }
     #endregion
 }
