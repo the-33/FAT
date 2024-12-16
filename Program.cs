@@ -156,23 +156,19 @@ class Program
     #region MAIN_METHODS
     static void fatTest(Fat testFat)
     {
-        testFat = loadFat("../../../tests/", "test");
+        testFat = loadFat("../../../tests", "test");
 
-        //testFat.addDirectory("holamundo", "C://");
-        //testFat.addFile("jsjs.txt", "C://holamundo");
-        //testFat.writeToFile("jsjs.txt", "C://holamundo", "aksdfjslkfjslfkjsflksjflksjdflsdkjfsfjsfl\nsdfksfksjflsjdfsjfslfjsJAJAJAJ");
-        //testFat.writeToFile("jsjs.txt", "C://holamundo", "hoola", false);
-        //testFat.writeToFile("jsjs.txt", "C://holamundo", "hoola");
-        //Console.WriteLine(testFat.catFile("jsjs.txt", "C://holamundo"));
-        //testFat.copyFile("C://holamundo", "jsjs.txt", "C://", "jjj.bat");
-        //testFat.addDirectory("hey", "C://holamundo");
-        //Console.WriteLine(testFat.listDirectory("C://holamundo"));
-        //Console.WriteLine(testFat.listDirectory("C://"));
-        //testFat.moveFile("C://holamundo", "jsjs.txt", "C://");
-        //testFat.showMetadata();
-
-        //saveFat(testFat, "../../../tests/", "test");
-
+        testFat.addDirectory("peliculas", "C://");
+        testFat.addFile("shrek.mp4", "C://peliculas/");
+        testFat.moveFile("C://peliculas/", "shrek.mp4", "C://");
+        testFat.addDirectory("peliculas de animacion", "C://peliculas/");
+        testFat.removeFile("shrek.mp4", "C://");
+        testFat.addFile("el padrino.mp4", "C://peliculas/peliculas de animacion/");
+        testFat.moveFile("C://peliculas/peliculas de animacion/", "el padrino.mp4", "C://peliculas");
+        testFat.addDirectory("peliculas buenas", "C://");
+        testFat.moveDirectory("C://", "peliculas buenas", "C://peliculas/");
+        testFat.copyFile("C://peliculas/", "el padrino.mp4", "C://peliculas/peliculas buenas/");
+        testFat.showMetadata();
         return;
     }
 
@@ -234,9 +230,8 @@ class Program
             case 0: consoleEnvironment(fat); break;
             case 1: showFatMetadata(fat); break;
             case 2: saveFat(fat, "", ""); break;
-            default: Environment.Exit(0);  break;
+            default: Console.Clear(); Environment.Exit(0);  break;
         }
-
         Console.Clear();
     }
 
@@ -527,7 +522,6 @@ class Program
     static Fat loadFat(string path, string fileName)
     {
         string jsonString = System.IO.File.ReadAllText(path + fileName + ".json");
-        Console.Write(jsonString);
         return JsonSerializer.Deserialize<Fat>(jsonString)!;
     }
     #endregion

@@ -150,12 +150,12 @@ namespace FAT
             {
                 if (routing.Length > 0)
                 {
-                    cluster = metadata.rootDirectory.entries.IndexOf(metadata.rootDirectory.entries.Find(e => e.name == routing[0]));
+                    cluster = (metadata.rootDirectory.entries.Exists(e => e.name == routing[0])) ? metadata.rootDirectory.entries.Find(e => e.name == routing[0]).startingCluster : -1;
                     if (cluster == -1) throw new Exception(Bold().Red().Text("Could not find " + path + "\n"));
                     for (int i = 1; i < routing.Length; i++)
                     {
                         FAT.Data.Directory d = (FAT.Data.Directory)data.clusters[cluster];
-                        cluster = d.entries.IndexOf(d.entries.Find(e => e.name == routing[i]));
+                        cluster = (d.entries.Exists(e => e.name == routing[i])) ? d.entries.Find(e => e.name == routing[i]).startingCluster : -1;
                         if (cluster == -1) throw new Exception(Bold().Red().Text("Could not find " + path + "\n"));
                     }
                 }
@@ -266,7 +266,7 @@ namespace FAT
             }
 
             if (newDirectoryCluster == -1) metadata.rootDirectory.entries.Add(new Entry(newName, "", directoryEntry.startingCluster));
-            else ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Add(new Entry(newName, "", directoryEntry.startingCluster));
+            else ((FAT.Data.Directory)data.clusters[newDirectoryCluster]).entries.Add(new Entry(newName, "", directoryEntry.startingCluster));
 
             return true;
         }
@@ -404,7 +404,7 @@ namespace FAT
             }
 
             if (newDirectoryCluster == -1) metadata.rootDirectory.entries.Add(new Entry(newfileName, newfileType, fileEntry.startingCluster));
-            else ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Add(new Entry(newfileName, newfileType, fileEntry.startingCluster));
+            else ((FAT.Data.Directory)data.clusters[newDirectoryCluster]).entries.Add(new Entry(newfileName, newfileType, fileEntry.startingCluster));
 
             return true;
         }
@@ -421,7 +421,7 @@ namespace FAT
 
             if (directoryCluster == -2) return false;
 
-            bool success = addFile(newName, newPath);
+            bool success = addFile(newfileName + '.' + newfileType, newPath);
 
             if (!success)
             {
@@ -429,7 +429,7 @@ namespace FAT
                 return false;
             }
 
-            success = writeToFile(newName, newPath, catFile(name, path), true);
+            success = writeToFile(newfileName + '.' + newfileType, newPath, catFile(name, path), true);
 
             if (!success)
             {
