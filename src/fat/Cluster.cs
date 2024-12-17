@@ -21,6 +21,12 @@ namespace FAT.Data
             data = new byte[clusterSize];
         }
 
+        [JsonConstructor]
+        public File(byte[] data)
+        {
+            this.data = data;
+        }
+
         public override string ToString()
         {
             return System.Text.Encoding.UTF8.GetString(data, 0, data.Length).Replace("\0", "");
@@ -34,6 +40,12 @@ namespace FAT.Data
         public Directory()
         {
             entries = new List<Fat.Entry>();
+        }
+
+        [JsonConstructor]
+        public Directory(List<Fat.Entry> entries)
+        {
+            this.entries = entries;
         }
 
         public override string ToString()

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection.PortableExecutable;
 using System.Runtime.Intrinsics.X86;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using FAT.Data;
@@ -47,6 +48,15 @@ namespace FAT
                 this.fatCopyPath = fatCopyPath;
                 clusters = new List<ClusterMetadata>();
                 rootDirectory = new RootDirectory();
+            }
+
+            [JsonConstructor]
+            public Metadata(string fatCopyPath, BootCode bootCode, List<ClusterMetadata> clusters, RootDirectory rootDirectory)
+            {
+                this.fatCopyPath = fatCopyPath;
+                this.clusters = clusters;
+                this.rootDirectory = rootDirectory;
+                this.bootCode = bootCode;
             }
 
             public override string ToString()
@@ -102,6 +112,12 @@ namespace FAT
             {
                 clusters = new List<Cluster>();
             }
+
+            [JsonConstructor]
+            public Data(List<Cluster> clusters)
+            {
+                this.clusters = clusters;
+            }
         };
 
         public struct Entry
@@ -110,6 +126,7 @@ namespace FAT
             public string type { get; set; }
             public int startingCluster { get; set; }
 
+            [JsonConstructor]
             public Entry(string name, string type, int startingCluster)
             {
                 this.name = name;
@@ -132,6 +149,14 @@ namespace FAT
         {
             metadata = new Metadata(fatCopyPath);
             data = new Data();
+            this.clusterSize = clusterSize;
+        }
+
+        [JsonConstructor]
+        public Fat(Metadata metadata, Data data, int clusterSize) 
+        {
+            this.metadata = metadata;
+            this.data = data;
             this.clusterSize = clusterSize;
         }
 

@@ -31,24 +31,21 @@
         "reserved": false,
         "next": -1,
         "end": true
+      },
+      {
+        "available": false,
+        "damaged": false,
+        "reserved": false,
+        "next": -1,
+        "end": true
       }
     ],
     "rootDirectory": {
       "entries": [
         {
-          "name": "holamundo",
+          "name": "peliculas",
           "type": "",
           "startingCluster": 0
-        },
-        {
-          "name": "jjj",
-          "type": "bat",
-          "startingCluster": 2
-        },
-        {
-          "name": "jsjs",
-          "type": "txt",
-          "startingCluster": 1
         }
       ]
     }
@@ -59,7 +56,17 @@
         "$type": 1,
         "entries": [
           {
-            "name": "hey",
+            "name": "peliculas de animacion",
+            "type": "",
+            "startingCluster": 2
+          },
+          {
+            "name": "el padrino",
+            "type": "mp4",
+            "startingCluster": 1
+          },
+          {
+            "name": "peliculas buenas",
             "type": "",
             "startingCluster": 3
           }
@@ -67,15 +74,25 @@
       },
       {
         "$type": 0,
-        "data": "aG9vbGE="
-      },
-      {
-        "$type": 0,
-        "data": "aG9vbGE="
+        "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
       },
       {
         "$type": 1,
         "entries": []
+      },
+      {
+        "$type": 1,
+        "entries": [
+          {
+            "name": "el padrino",
+            "type": "mp4",
+            "startingCluster": 4
+          }
+        ]
+      },
+      {
+        "$type": 0,
+        "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
       }
     ]
   }

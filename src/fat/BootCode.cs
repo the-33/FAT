@@ -8,6 +8,6 @@ namespace FAT.MetaData
 {
     public class BootCode
     {
-
+        public BootCode() { }
     }
 }

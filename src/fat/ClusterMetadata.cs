@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using FAT.Data;
 
@@ -22,6 +23,16 @@ namespace FAT.MetaData
             this.end = end;
             damaged = false;
             reserved = false;
+        }
+
+        [JsonConstructor]
+        public ClusterMetadata(bool available, bool damaged, bool reserved, int next, bool end)
+        {
+            this.available = available;
+            this.damaged = damaged;
+            this.reserved = reserved;
+            this.next = next;
+            this.end = end;
         }
 
         public override string ToString()

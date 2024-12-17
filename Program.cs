@@ -156,19 +156,20 @@ class Program
     #region MAIN_METHODS
     static void fatTest(Fat testFat)
     {
-        testFat = loadFat("../../../tests", "test");
+        testFat = loadFat("../../../tests/", "test");
 
-        testFat.addDirectory("peliculas", "C://");
-        testFat.addFile("shrek.mp4", "C://peliculas/");
-        testFat.moveFile("C://peliculas/", "shrek.mp4", "C://");
-        testFat.addDirectory("peliculas de animacion", "C://peliculas/");
-        testFat.removeFile("shrek.mp4", "C://");
-        testFat.addFile("el padrino.mp4", "C://peliculas/peliculas de animacion/");
-        testFat.moveFile("C://peliculas/peliculas de animacion/", "el padrino.mp4", "C://peliculas");
-        testFat.addDirectory("peliculas buenas", "C://");
-        testFat.moveDirectory("C://", "peliculas buenas", "C://peliculas/");
-        testFat.copyFile("C://peliculas/", "el padrino.mp4", "C://peliculas/peliculas buenas/");
-        testFat.showMetadata();
+        //testFat.addDirectory("peliculas", "C://");
+        //testFat.addFile("shrek.mp4", "C://peliculas/");
+        //testFat.moveFile("C://peliculas/", "shrek.mp4", "C://");
+        //testFat.addDirectory("peliculas de animacion", "C://peliculas/");
+        //testFat.removeFile("shrek.mp4", "C://");
+        //testFat.addFile("el padrino.mp4", "C://peliculas/peliculas de animacion/");
+        //testFat.moveFile("C://peliculas/peliculas de animacion/", "el padrino.mp4", "C://peliculas");
+        //testFat.addDirectory("peliculas buenas", "C://");
+        //testFat.moveDirectory("C://", "peliculas buenas", "C://peliculas/");
+        //testFat.copyFile("C://peliculas/", "el padrino.mp4", "C://peliculas/peliculas buenas/");
+
+        //saveFat(testFat, "../../../tests/", "test");
         return;
     }
 
@@ -522,7 +523,7 @@ class Program
     static Fat loadFat(string path, string fileName)
     {
         string jsonString = System.IO.File.ReadAllText(path + fileName + ".json");
-        return JsonSerializer.Deserialize<Fat>(jsonString)!;
+        return JsonSerializer.Deserialize<Fat>(jsonString);
     }
     #endregion
 }
