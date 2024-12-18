@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using FAT;
 using static Crayon.Output;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Terminal
 {
@@ -16,13 +19,19 @@ namespace Terminal
 
     public class ConsoleManager
     {
-        public Dictionary<string, Command> path { get; }
-        public Executions exec = new();
+        private Dictionary<string, Command> path;
+        private Executions exec;
+        public List<Task> taskList;
 
         public ConsoleManager(string descPath, string descFileType)
         {
             // Para saber que hace cada comando consultar https://en.wikibooks.org/wiki/Linux_Guide/Linux_commands
             // O escribir "comando" --help en una maquina linux, si tienes windows consultar https://apps.microsoft.com/detail/9pdxgncfsczv?rtc=1&hl=es-es&gl=ES
+
+            exec = new();
+            taskList = new();
+
+            taskList.Add(new(0, new(), "Terminal.exe"));
 
             path = new Dictionary<string, Command>()
             {
@@ -49,10 +58,21 @@ namespace Terminal
             };
         }
 
-        public void execute(string command, string?[] args, Fat fat)
+        public void execute(string command, string?[] args, Fat fat, ref bool exit)
         {
-            if (path.ContainsKey(command)) path[command].execute(args, fat);
+            if (path.ContainsKey(command)) path[command].execute(args, fat, ref exit);
+            else if (command.EndsWith(".sh") && (args.Length == 0)) newTask(command, fat);
+            else if (command.EndsWith(".sh") && (args.Length == 1) && (args[0] == "&")) System.Threading.Tasks.Task.Run(() => newTask(command, fat));
             else Console.WriteLine(Red().Bold().Text("The command " + command + " was not found, to get a list of all avaliable commands type 'help'"));
+            
+        }
+
+        public void newTask(string path, Fat fat)
+        {
+            if(fat.fileExists(path))
+            {
+                //taskList.Add(new(taskList.Last().pid+1, , ), path.Split("/").Last()));
+            }
         }
     }
 }

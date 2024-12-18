@@ -156,20 +156,23 @@ class Program
     #region MAIN_METHODS
     static void fatTest(Fat testFat)
     {
-        testFat = loadFat("../../../tests/", "test");
+        //testFat = loadFat("../../../tests/", "test");
+        //Console.WriteLine(testFat.catFile("el padrino.mp4", "C://peliculas/peliculas buenas/"));
+        //Console.WriteLine(testFat.catFile("el padrino.mp4", "C://peliculas/"));
 
-        //testFat.addDirectory("peliculas", "C://");
-        //testFat.addFile("shrek.mp4", "C://peliculas/");
-        //testFat.moveFile("C://peliculas/", "shrek.mp4", "C://");
-        //testFat.addDirectory("peliculas de animacion", "C://peliculas/");
-        //testFat.removeFile("shrek.mp4", "C://");
-        //testFat.addFile("el padrino.mp4", "C://peliculas/peliculas de animacion/");
-        //testFat.moveFile("C://peliculas/peliculas de animacion/", "el padrino.mp4", "C://peliculas");
-        //testFat.addDirectory("peliculas buenas", "C://");
-        //testFat.moveDirectory("C://", "peliculas buenas", "C://peliculas/");
-        //testFat.copyFile("C://peliculas/", "el padrino.mp4", "C://peliculas/peliculas buenas/");
+        testFat.addDirectory("peliculas", "C://");
+        testFat.addFile("shrek.mp4", "C://peliculas/");
+        testFat.moveFile("C://peliculas/", "shrek.mp4", "C://");
+        testFat.addDirectory("peliculas de animacion", "C://peliculas/");
+        testFat.removeFile("shrek.mp4", "C://");
+        testFat.addFile("el padrino.mp4", "C://peliculas/peliculas de animacion/");
+        testFat.moveFile("C://peliculas/peliculas de animacion/", "el padrino.mp4", "C://peliculas");
+        testFat.addDirectory("peliculas buenas", "C://");
+        testFat.moveDirectory("C://", "peliculas buenas", "C://peliculas/");
+        testFat.copyFile("C://peliculas/", "el padrino.mp4", "C://peliculas/peliculas buenas/", "los padrinos.mp5");
+        testFat.writeToFile("los padrinos.mp5", "C://peliculas/peliculas buenas/", "holaholafsfsfsfsdfjskjskskdkdkduuffdnf885758595959sjdhdgsdfsaldkfsdfeif84943f8ufshrgkjsdfghifgidfgjidfjg");
 
-        //saveFat(testFat, "../../../tests/", "test");
+        saveFat(testFat, "../../../tests/", "test");
         return;
     }
 
@@ -246,6 +249,7 @@ class Program
         ConsoleManager cM = new(COMMAND_DESCRIPTION_PATH, COMMAND_DESCRIPTION_EXTENSION); // Clase para gestionar los comandos
 
         string? workingDirectory = "C:/", userName, computerName;
+        bool exit = false;
 
         using (Process process = new Process()) // Obtiene el nombre de usuario y el nombre del equipo
         {
@@ -262,15 +266,18 @@ class Program
             userName = output.Split('\\')[1].Substring(0, output.Split('\\')[1].Length - 2);
         }
 
-        while (true) // Bucle principal
+        while (!exit) // Bucle principal
         {
             //TODO: agregar colores
             Console.WriteLine(Red().Text("┌─[") + Green().Text(userName) + Yellow().Text("@") + Rgb(43, 91, 156).Text(computerName) + Red().Text("]─[") + Rgb(52, 117, 27).Text(workingDirectory) + Red().Text("]"));
             Console.Write(Red().Text("└───■") + Yellow().Text(" $ "));
 
             command = Console.ReadLine();
-            if (command != null && command != "") CommandManager(command, cM, fat);
+            if (command != null && command != "") CommandManager(command, cM, fat, ref exit);
         }
+
+        Console.Clear();
+        mainMenu(fat);
     }
     #endregion
 
@@ -291,7 +298,7 @@ class Program
     }
 
     #region AUXILIARY METHODS
-    static void CommandManager(string s, ConsoleManager cM, Fat fat)
+    static void CommandManager(string s, ConsoleManager cM, Fat fat, ref bool exit)
     {
         //Un comando tendra el formato "COMANDO ARGUMENTOS FLAGS donde PARAMETROS sera una lista de parametros variable del tipo -FLAG ARGUMENTOS"
         string command = s.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
@@ -300,7 +307,7 @@ class Program
         {
             args = (s.Substring(command.Length)).Split(' ', StringSplitOptions.RemoveEmptyEntries);
         }
-        cM.execute(command, args, fat);
+        cM.execute(command, args, fat, ref exit);
     }
 
     static void PrintMenu(string[] options, int selected, string message, int hOffset, int vOffset, string bottomMessage)

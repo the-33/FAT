@@ -177,8 +177,7 @@ namespace Terminal
         public Func<string?[], Fat, string> exitExecution = (args, fat) =>
         {
             Console.WriteLine(Dim().Text("Exiting..."));
-            Environment.Exit(0);
-            return "";
+            return "[EXIT]";
         };
 
         public Func<string?[], Fat, string> clsExecution = (args, fat) =>

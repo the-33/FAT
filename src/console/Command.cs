@@ -113,13 +113,14 @@ namespace Terminal
             }
         }
 
-        public void execute(string?[] args, Fat fat)
+        public void execute(string?[] args, Fat fat, ref bool exit)
         {
             if (args.Length == 1 && args[0] == "--help") help();
             else
             {
                 string result = execution(args, fat);
-                if (result != "") Console.WriteLine(result);
+                if (result == "[EXIT]") exit = true;
+                else if (result != "") Console.WriteLine(result);
             }
         }
 
