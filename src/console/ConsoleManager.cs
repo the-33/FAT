@@ -22,6 +22,7 @@ namespace Terminal
         private Dictionary<string, Command> path;
         private Executions exec;
         public List<Task> taskList;
+        private int pidCounter;
 
         public ConsoleManager(string descPath, string descFileType)
         {
@@ -32,6 +33,7 @@ namespace Terminal
             taskList = new();
 
             taskList.Add(new(0, new(), "Terminal.exe"));
+            pidCounter = 1;
 
             path = new Dictionary<string, Command>()
             {
@@ -61,17 +63,25 @@ namespace Terminal
         public void execute(string command, string?[] args, Fat fat, ref bool exit)
         {
             if (path.ContainsKey(command)) path[command].execute(args, fat, ref exit);
-            else if (command.EndsWith(".sh") && (args.Length == 0)) newTask(command, fat);
+            else if (command.EndsWith(".sh") && args[0] == "") newTask(command, fat);
             else if (command.EndsWith(".sh") && (args.Length == 1) && (args[0] == "&")) System.Threading.Tasks.Task.Run(() => newTask(command, fat));
             else Console.WriteLine(Red().Bold().Text("The command " + command + " was not found, to get a list of all avaliable commands type 'help'"));
             
         }
 
-        public void newTask(string path, Fat fat)
+        public void newTask(string fullPath, Fat fat)
         {
-            if(fat.fileExists(path))
+            string name = fullPath.Split('/').Last();
+            string path = fullPath.Replace(name, "");
+
+            if (fat.fileExists(name, path))
             {
-                //taskList.Add(new(taskList.Last().pid+1, , ), path.Split("/").Last()));
+                int pid = pidCounter;
+                pidCounter++;
+                
+                taskList.Add(new(pid, fat.catFile(name, path).Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList(), name));
+                taskList.Find(x => x.pid == pid).Execute();
+                taskList.Remove(taskList.Find(x => x.pid == pid));
             }
         }
     }

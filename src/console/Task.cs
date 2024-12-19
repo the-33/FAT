@@ -23,6 +23,7 @@ namespace Terminal
 
         public bool Execute()
         {
+            Console.WriteLine("hola");
             return true;
         }
     }

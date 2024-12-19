@@ -157,7 +157,7 @@ class Program
     static void fatTest(Fat testFat)
     {
         //testFat = loadFat("../../../tests/", "test");
-        //Console.WriteLine(testFat.catFile("el padrino.mp4", "C://peliculas/peliculas buenas/"));
+        //Console.WriteLine(testFat.catFile("los padrinos.mp5", "C://peliculas/peliculas buenas/"));
         //Console.WriteLine(testFat.catFile("el padrino.mp4", "C://peliculas/"));
 
         testFat.addDirectory("peliculas", "C://");
@@ -167,10 +167,10 @@ class Program
         testFat.removeFile("shrek.mp4", "C://");
         testFat.addFile("el padrino.mp4", "C://peliculas/peliculas de animacion/");
         testFat.moveFile("C://peliculas/peliculas de animacion/", "el padrino.mp4", "C://peliculas");
-        testFat.addDirectory("peliculas buenas", "C://");
-        testFat.moveDirectory("C://", "peliculas buenas", "C://peliculas/");
-        testFat.copyFile("C://peliculas/", "el padrino.mp4", "C://peliculas/peliculas buenas/", "los padrinos.mp5");
-        testFat.writeToFile("los padrinos.mp5", "C://peliculas/peliculas buenas/", "holaholafsfsfsfsdfjskjskskdkdkduuffdnf885758595959sjdhdgsdfsaldkfsdfeif84943f8ufshrgkjsdfghifgidfgjidfjg");
+        testFat.addDirectory("peliculas_buenas", "C://");
+        testFat.moveDirectory("C://", "peliculas_buenas", "C://peliculas/");
+        testFat.copyFile("C://peliculas/", "el padrino.mp4", "C://peliculas/peliculas_buenas/", "los_padrinos.sh");
+        testFat.writeToFile("los_padrinos.sh", "C://peliculas/peliculas_buenas/", "holaholafsfsfsfsdfjskjskskdkdkduuffdnf885758595959sjdhdgsdfsaldkfsdfeif84943f8ufshrgkjsdfghifgidfgjidfjg");
 
         saveFat(testFat, "../../../tests/", "test");
         return;
@@ -241,6 +241,8 @@ class Program
 
     static void consoleEnvironment(Fat fat)
     {
+        fat = loadFat("../../../tests/", "test");
+
         Console.Clear();
         Console.CursorVisible = true;
 
@@ -527,7 +529,7 @@ class Program
         System.IO.File.WriteAllText(path + fileName + ".json", jsonString);
     }
 
-    static Fat loadFat(string path, string fileName)
+    static Fat? loadFat(string path, string fileName)
     {
         string jsonString = System.IO.File.ReadAllText(path + fileName + ".json");
         return JsonSerializer.Deserialize<Fat>(jsonString);

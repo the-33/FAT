@@ -147,30 +147,22 @@ namespace FAT
             Console.Write(metadata);
         }
 
-        private int findDirectoryCluster(string path)
+        private int findDirectoryCluster(string fullPath)
         {
-            path = path.Replace("C:/", "");
+            string path = fullPath.Replace("C:/", "");
             string[] routing = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
             int cluster = -1;
 
-            try
+            if (routing.Length > 0)
             {
-                if (routing.Length > 0)
+                cluster = (metadata.rootDirectory.entries.Exists(e => e.name == routing[0])) ? metadata.rootDirectory.entries.Find(e => e.name == routing[0]).startingCluster : -1;
+                if (cluster == -1) return -2;
+                for (int i = 1; i < routing.Length; i++)
                 {
-                    cluster = (metadata.rootDirectory.entries.Exists(e => e.name == routing[0])) ? metadata.rootDirectory.entries.Find(e => e.name == routing[0]).startingCluster : -1;
-                    if (cluster == -1) throw new Exception(Bold().Red().Text("Could not find " + path + "\n"));
-                    for (int i = 1; i < routing.Length; i++)
-                    {
-                        FAT.Data.Directory d = (FAT.Data.Directory)data.clusters[cluster];
-                        cluster = (d.entries.Exists(e => e.name == routing[i])) ? d.entries.Find(e => e.name == routing[i]).startingCluster : -1;
-                        if (cluster == -1) throw new Exception(Bold().Red().Text("Could not find " + path + "\n"));
-                    }
+                    FAT.Data.Directory d = (FAT.Data.Directory)data.clusters[cluster];
+                    cluster = (d.entries.Exists(e => e.name == routing[i])) ? d.entries.Find(e => e.name == routing[i]).startingCluster : -1;
+                    if (cluster == -1) return -2;
                 }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                return -2;
             }
 
             return cluster;
@@ -287,7 +279,7 @@ namespace FAT
             if (directoryCluster == -2) return false;
             if (directoryCluster == -1)
             {
-                Console.WriteLine(Bold().Red().Text("You can not copy the root directory"));
+                Console.Write(Bold().Red().Text("You can not copy the root directory\n"));
                 return false;
             }
 
@@ -295,7 +287,7 @@ namespace FAT
 
             if (!success)
             {
-                Console.WriteLine(Bold().Red().Text("Could not copy the directory " + path + "/" + name + " to " + newPath + "/" + newName + "\n"));
+                Console.Write(Bold().Red().Text("Could not copy the directory \"" + path + "/" + name + "\" to \"" + newPath + "/" + newName + "\"\n"));
                 return false;
             }
 
@@ -325,7 +317,7 @@ namespace FAT
 
             returnValue = (directoryCluster == -2);
 
-            if (!returnValue) Console.WriteLine(Bold().Red().Text("Could not find the directory \"" + path + "\"\n"));
+            if (!returnValue) Console.Write(Bold().Red().Text("Could not find the directory \"" + path + "\"\n"));
             return returnValue;
         }
 
@@ -377,7 +369,7 @@ namespace FAT
 
             if (cluster == -1)
             {
-                Console.WriteLine(Bold().Red().Text("Could not find the file " + path + "/" + name + "/n"));
+                Console.Write(Bold().Red().Text("Could not find the file \"" + path + "/" + name + "\"\n"));
                 return false;
             }
 
@@ -443,7 +435,7 @@ namespace FAT
 
             if (!success)
             {
-                Console.WriteLine(Bold().Red().Text("Could not copy the file " + path + "/" + name + " to " + newPath + "/" + newName + "\n"));
+                Console.Write(Bold().Red().Text("Could not copy the file \"" + path + "/" + name + "\" to \"" + newPath + "/" + newName + "\"\n"));
                 return false;
             }
 
@@ -451,7 +443,7 @@ namespace FAT
 
             if (!success)
             {
-                Console.WriteLine(Bold().Red().Text("Could not copy the file " + path + "/" + name + " to " + newPath + "/" + newName + "\n"));
+                Console.Write(Bold().Red().Text("Could not copy the file \"" + path + "/" + name + "\" to \"" + newPath + "/" + newName + "\"\n"));
                 removeFile(newName, newPath);
                 return false;
             }
@@ -495,7 +487,7 @@ namespace FAT
 
             if (cluster == -1)
             {
-                Console.WriteLine(Bold().Red().Text("Could not find the file " + path + "/" + name + "/n"));
+                Console.Write(Bold().Red().Text("Could not find the file \"" + path + "/" + name + "\"\n"));
                 return false;
             }
 
@@ -560,22 +552,20 @@ namespace FAT
             return content;
         }
 
-        public bool fileExists(string path)
+        public bool fileExists(string name, string path)
         {
-            string name = path.Split("/")[path.Split("/").Length - 1];
-            path = path.Replace(name, "");
             string fileType = name.Split('.')[1];
             string fileName = name.Split('.')[0];
             bool returnValue = true;
 
             int directoryCluster = findDirectoryCluster(path);
 
-            returnValue = (directoryCluster == -2);
+            if (directoryCluster == -2) { Console.Write(Bold().Red().Text("Could not find the file \"" + path + "/" + name + "\"\n")); return false; }
 
             if (directoryCluster == -1) returnValue = metadata.rootDirectory.entries.Exists(x => x.name == fileName && x.type == fileType);
             else returnValue = ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Exists(x => x.name == fileName && x.type == fileType);
 
-            if (!returnValue) Console.WriteLine(Bold().Red().Text("Could not find the file \"" + path + "\"\n"));
+            if (!returnValue) Console.Write(Bold().Red().Text("Could not find the file \"" + path + "/" + name + "\"\n"));
             return returnValue;
         }
     }
