@@ -103,7 +103,7 @@ class Program
     }
     #endregion
 
-    public static Fat fat { get; set; }
+    public static Fat fat { get; set; } = new(CLUSTER_SIZE);
 
     [STAThread]
     public static void Main(string[] args)
@@ -394,7 +394,29 @@ class Program
                     loadedFat = null;
                 }
 
-                if (loadedFat != null && loadedFat.metadata.bootCode.boot(loadedFat)) fat = loadedFat;
+                if (loadedFat != null && loadedFat.metadata.bootCode.boot(loadedFat))
+                {
+                    fat = loadedFat;
+
+                    jsonString = JsonSerializer.Serialize(fat, new JsonSerializerOptions { WriteIndented = true });
+
+                    if (File.Exists(path + "cpy"))
+                    {
+                        File.SetAttributes(
+                           path + "cpy",
+                           FileAttributes.Normal
+                        );
+                    }
+
+                    jsonString = JsonSerializer.Serialize(fat, new JsonSerializerOptions { WriteIndented = false });
+                    System.IO.File.WriteAllText(path + "cpy", Convert.ToBase64String(Encoding.UTF8.GetBytes(jsonString)));
+                    File.SetAttributes(
+                       path + "cpy",
+                       FileAttributes.Archive |
+                       FileAttributes.Hidden |
+                       FileAttributes.ReadOnly
+                    );
+                }
                 else
                 {
                     result = System.Windows.Forms.MessageBox.Show(
@@ -404,7 +426,7 @@ class Program
                         MessageBoxIcon.Error
                     );
 
-                    if(result == DialogResult.OK)
+                    if (result == DialogResult.OK)
                     {
                         try
                         {
