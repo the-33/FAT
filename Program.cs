@@ -1,20 +1,13 @@
-﻿using Crayon;
-using Terminal;
+﻿using Terminal;
 using FAT;
-using FAT.Data;
-using FAT.MetaData;
-using System;
-using System.Data;
 using System.Diagnostics;
 using System.Windows;
 using static Formatter.CommFormatter;
 using static Crayon.Output;
 using System.Runtime.InteropServices;
-using System.Reflection;
-using System.Drawing;
-using static Program;
-using System.Management;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Text;
 
 class Program
 {
@@ -110,6 +103,9 @@ class Program
     }
     #endregion
 
+    public static Fat fat { get; set; }
+
+    [STAThread]
     public static void Main(string[] args)
     {
         /* Este es el "main" de la aplicacion
@@ -146,41 +142,43 @@ class Program
         }
 
         loadConfiguration();
-        Fat fat = new(CLUSTER_SIZE, ""); // Memoria FAT
+        fat = new(CLUSTER_SIZE); // Memoria FAT
         #endregion
 
-        if (TEST_FAT) { fatTest(fat); }
-        else { mainMenu(fat); }
+        if (TEST_FAT) { fatTest(); }
+        else { mainMenu(); }
     }
 
     #region MAIN_METHODS
-    static void fatTest(Fat testFat)
+    static void fatTest()
     {
         //testFat = loadFat("../../../tests/", "test");
         //Console.WriteLine(testFat.catFile("los padrinos.mp5", "C://peliculas/peliculas buenas/"));
         //Console.WriteLine(testFat.catFile("el padrino.mp4", "C://peliculas/"));
 
-        testFat.addDirectory("peliculas", "C://");
-        testFat.addFile("shrek.mp4", "C://peliculas/");
-        testFat.moveFile("C://peliculas/", "shrek.mp4", "C://");
-        testFat.addDirectory("peliculas de animacion", "C://peliculas/");
-        testFat.removeFile("shrek.mp4", "C://");
-        testFat.addFile("el padrino.mp4", "C://peliculas/peliculas de animacion/");
-        testFat.moveFile("C://peliculas/peliculas de animacion/", "el padrino.mp4", "C://peliculas");
-        testFat.addDirectory("peliculas_buenas", "C://");
-        testFat.moveDirectory("C://", "peliculas_buenas", "C://peliculas/");
-        testFat.copyFile("C://peliculas/", "el padrino.mp4", "C://peliculas/peliculas_buenas/", "los_padrinos.sh");
-        testFat.writeToFile("los_padrinos.sh", "C://peliculas/peliculas_buenas/", "holaholafsfsfsfsdfjskjskskdkdkduuffdnf885758595959sjdhdgsdfsaldkfsdfeif84943f8ufshrgkjsdfghifgidfgjidfjg");
+        //testFat.addDirectory("peliculas", "C://");
+        //testFat.addFile("shrek.mp4", "C://peliculas/");
+        //testFat.moveFile("C://peliculas/", "shrek.mp4", "C://");
+        //testFat.addDirectory("peliculas de animacion", "C://peliculas/");
+        //testFat.removeFile("shrek.mp4", "C://");
+        //testFat.addFile("el padrino.mp4", "C://peliculas/peliculas de animacion/");
+        //testFat.moveFile("C://peliculas/peliculas de animacion/", "el padrino.mp4", "C://peliculas");
+        //testFat.addDirectory("peliculas_buenas", "C://");
+        //testFat.moveDirectory("C://", "peliculas_buenas", "C://peliculas/");
+        //testFat.copyFile("C://peliculas/", "el padrino.mp4", "C://peliculas/peliculas_buenas/", "los_padrinos.sh");
+        //testFat.writeToFile("los_padrinos.sh", "C://peliculas/peliculas_buenas/", "holaholafsfsfsfsdfjskjskskdkdkduuffdnf885758595959sjdhdgsdfsaldkfsdfeif84943f8ufshrgkjsdfghifgidfgjidfjg");
 
-        saveFat(testFat, "../../../tests/", "test");
+        //saveFat(testFat, "../../../tests/", "test");
         return;
     }
 
-    static void mainMenu(Fat fat, int selected = 0)
+    static void mainMenu(int selected = 0)
     {
         Console.Clear();
         Console.CursorVisible = false;
         Console.SetCursorPosition(Console.CursorLeft, Console.WindowTop + TITLE_VERTICAL_OFFSET);
+
+        while (System.Console.KeyAvailable) System.Console.ReadKey(true);
 
         foreach (string s in TITLE)
         {
@@ -231,18 +229,17 @@ class Program
 
         switch(selected)
         {
-            case 0: consoleEnvironment(fat); break;
-            case 1: showFatMetadata(fat); break;
-            case 2: saveFat(fat, "", ""); break;
-            default: Console.Clear(); Environment.Exit(0);  break;
+            case 0: consoleEnvironment(); break;
+            case 1: showFatMetadata(); break;
+            case 2: newFat(); break;
+            case 3: saveFat(); break;
+            case 4: loadFat(); break;
+            default: exitProgram(selected); break;
         }
-        Console.Clear();
     }
 
-    static void consoleEnvironment(Fat fat)
+    static void consoleEnvironment()
     {
-        fat = loadFat("../../../tests/", "test");
-
         Console.Clear();
         Console.CursorVisible = true;
 
@@ -275,15 +272,14 @@ class Program
             Console.Write(Red().Text("└───■") + Yellow().Text(" $ "));
 
             command = Console.ReadLine();
-            if (command != null && command != "") CommandManager(command, cM, fat, ref exit);
+            if (command != null && command != "") CommandManager(command, cM, ref exit);
         }
 
         Console.Clear();
-        mainMenu(fat);
+        mainMenu();
     }
-    #endregion
 
-    static void showFatMetadata(Fat fat)
+    static void showFatMetadata()
     {
         Console.Clear();
         fat.showMetadata();
@@ -296,11 +292,200 @@ class Program
         }
         while (keyPress != ConsoleKey.Enter);
         Console.Clear();
-        mainMenu(fat);
+        mainMenu(1);
     }
 
+    static void newFat()
+    {
+        DialogResult result = System.Windows.Forms.MessageBox.Show(
+            "The current fat state will be overwritten. Do you want to continue?",
+            "WARNING",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning
+        );
+
+        if (result == DialogResult.Yes) fat = new(CLUSTER_SIZE);
+        mainMenu(2);
+    }
+
+    static void saveFat()
+    {
+        string path = askForFile();
+
+        if(path != "")
+        {
+            if (File.Exists(path))
+            {
+                while (System.Console.KeyAvailable) System.Console.ReadKey(true);
+                DialogResult result = System.Windows.Forms.MessageBox.Show(
+                    $"The file {path} already exists. Do you want to overwrite it?",
+                    "WARNING",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning
+                );
+
+                if (result == DialogResult.No)
+                {
+                    mainMenu(3);
+                }
+            }
+
+            Fat.Metadata m = fat.metadata;
+            m.fatCopyPath = path + "cpy";
+            fat.metadata = m;
+
+            fat.metadata.bootCode.recalculateMagicNumber(fat);
+
+            string jsonString = JsonSerializer.Serialize(fat, new JsonSerializerOptions { WriteIndented = true });
+
+            System.IO.File.WriteAllText(path, jsonString);
+
+            if(File.Exists(path + "cpy"))
+            {
+                File.SetAttributes(
+                   path + "cpy",
+                   FileAttributes.Normal
+                );
+            }
+
+            jsonString = JsonSerializer.Serialize(fat, new JsonSerializerOptions { WriteIndented = false });
+            System.IO.File.WriteAllText(path + "cpy", Convert.ToBase64String(Encoding.UTF8.GetBytes(jsonString)));
+            File.SetAttributes(
+               path + "cpy",
+               FileAttributes.Archive |
+               FileAttributes.Hidden |
+               FileAttributes.ReadOnly
+            );
+        }
+
+        mainMenu(3);
+    }
+
+    static void loadFat()
+    {
+        string path = askForFile(true);
+
+        if (path != "")
+        {
+            while (System.Console.KeyAvailable) System.Console.ReadKey(true);
+            DialogResult result = System.Windows.Forms.MessageBox.Show(
+                "The current fat state will be overwritten. Do you want to continue?",
+                "WARNING",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning
+            );
+
+            if (result == DialogResult.Yes)
+            {
+                string jsonString = System.IO.File.ReadAllText(path);
+                Fat? loadedFat;
+                try
+                {
+                    loadedFat = JsonSerializer.Deserialize<Fat>(jsonString);
+                }
+                catch (Exception e)
+                {
+                    System.Windows.Forms.MessageBox.Show(
+                        e.Message,
+                        "EXCEPTION",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                    );
+                    loadedFat = null;
+                }
+
+                if (loadedFat != null && loadedFat.metadata.bootCode.boot(loadedFat)) fat = loadedFat;
+                else
+                {
+                    result = System.Windows.Forms.MessageBox.Show(
+                        $"Could not load {path} , the file is corrupted or not formatted properly.\nPress OK to recover the data from the fat copy",
+                        "ERROR",
+                        MessageBoxButtons.OKCancel,
+                        MessageBoxIcon.Error
+                    );
+
+                    if(result == DialogResult.OK)
+                    {
+                        try
+                        {
+                            jsonString = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(System.IO.File.ReadAllText(path + "cpy")));
+                            loadedFat = JsonSerializer.Deserialize<Fat>(jsonString);
+                        }
+                        catch (Exception e)
+                        {
+                            System.Windows.Forms.MessageBox.Show(
+                                e.Message,
+                                "EXCEPTION",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Error
+                            );
+                            loadedFat = null;
+                        }
+
+                        if (loadedFat != null && loadedFat.metadata.bootCode.boot(loadedFat))
+                        {
+                            fat = loadedFat;
+
+                            jsonString = JsonSerializer.Serialize(fat, new JsonSerializerOptions { WriteIndented = true });
+
+                            System.IO.File.WriteAllText(path, jsonString);
+
+                            if (File.Exists(path + "cpy"))
+                            {
+                                File.SetAttributes(
+                                   path + "cpy",
+                                   FileAttributes.Normal
+                                );
+                            }
+
+                            jsonString = JsonSerializer.Serialize(fat, new JsonSerializerOptions { WriteIndented = false });
+                            System.IO.File.WriteAllText(path + "cpy", Convert.ToBase64String(Encoding.UTF8.GetBytes(jsonString)));
+                            File.SetAttributes(
+                               path + "cpy",
+                               FileAttributes.Archive |
+                               FileAttributes.Hidden |
+                               FileAttributes.ReadOnly
+                            );
+                        }
+                        else
+                        {
+                            System.Windows.Forms.MessageBox.Show(
+                                $"Could not recover the data from the fat copy.",
+                                "ERROR",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Error
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        
+        mainMenu(4);
+    }
+
+    static void exitProgram(int prevSelected)
+    {
+        DialogResult result = System.Windows.Forms.MessageBox.Show(
+            "Are you sure you want to exit?\nAll unsaved data will be lost.",
+            "WARNING",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning
+        );
+
+        if (result == DialogResult.Yes)
+        {
+            Console.Clear();
+            Console.WriteLine(Dim().Text("Exiting..."));
+            Environment.Exit(0);
+        }
+
+        mainMenu(prevSelected);
+    }
+    #endregion
+
     #region AUXILIARY METHODS
-    static void CommandManager(string s, ConsoleManager cM, Fat fat, ref bool exit)
+    static void CommandManager(string s, ConsoleManager cM, ref bool exit)
     {
         //Un comando tendra el formato "COMANDO ARGUMENTOS FLAGS donde PARAMETROS sera una lista de parametros variable del tipo -FLAG ARGUMENTOS"
         string command = s.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
@@ -316,13 +501,11 @@ class Program
     {
         if(selected < 0 || selected >= options.Length)
         {
-            Console.WriteLine(Red().Bold().Text("Cannot select an option that does not exist, selection will be set to default value (0)"));
             selected = 0;
         }
 
         int height = 5 + options.Length;
-        int width = 0;
-        foreach (string s in options) if(width < s.Length) width = s.Length;
+        int width = options.Max(x => x.Length);
         width += 8;
         if(width < message.Length) width = message.Length+10;
 
@@ -520,19 +703,28 @@ class Program
         }
     }
 
-    static void saveFat(Fat fat, string path, string fileName)
+    private static string askForFile(bool fileShouldExist = false)
     {
-        Console.WriteLine();
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        string jsonString = JsonSerializer.Serialize(fat, options);
+        OpenFileDialog openFileDialog = new OpenFileDialog
+        {
+            Filter = "FAT files (*.fat)|*.fat",
+            Title = "Select a FAT File",
+            Multiselect = false,
+            InitialDirectory = "../../../saveData/fats/",
+            RestoreDirectory = true,
+            CheckFileExists = fileShouldExist,
+        };
 
-        System.IO.File.WriteAllText(path + fileName + ".json", jsonString);
-    }
+        string filePath = "";
+        DialogResult result = openFileDialog.ShowDialog();
 
-    static Fat? loadFat(string path, string fileName)
-    {
-        string jsonString = System.IO.File.ReadAllText(path + fileName + ".json");
-        return JsonSerializer.Deserialize<Fat>(jsonString);
+        if (result == DialogResult.OK)
+        {
+            filePath = openFileDialog.FileName;
+            return filePath;
+        }
+
+        return filePath;
     }
     #endregion
 }

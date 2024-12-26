@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using System.Runtime.Intrinsics.X86;
 using System.Text;
@@ -19,15 +20,15 @@ namespace FAT
     {
         public struct Metadata
         {
-            public BootCode bootCode { get; set; }
-            public string fatCopyPath {  get; set; }
+            public readonly BootCode bootCode { get; }
+            public string fatCopyPath { get; set; }
             public List<ClusterMetadata> clusters { get; set; }
             public RootDirectory rootDirectory { get; set; }
 
-            public Metadata(string fatCopyPath = "")
+            public Metadata()
             {
                 bootCode = new BootCode();
-                this.fatCopyPath = fatCopyPath;
+                this.fatCopyPath = "";
                 clusters = new List<ClusterMetadata>();
                 rootDirectory = new RootDirectory();
             }
@@ -43,26 +44,10 @@ namespace FAT
 
             public override string ToString()
             {
-                string fullFatCopyPath = "";
-
-                using (Process process = new Process()) // Obtiene el nombre de usuario y el nombre del equipo
-                {
-                    process.StartInfo.FileName = "cmd.exe";
-                    process.StartInfo.Arguments = @"/c cd";
-                    process.StartInfo.UseShellExecute = false;
-                    process.StartInfo.RedirectStandardOutput = true;
-                    process.Start();
-
-                    StreamReader reader = process.StandardOutput;
-                    string output = reader.ReadToEnd();
-
-                    fullFatCopyPath = output.Replace("\n", "") + "/" + fatCopyPath;
-                }
-
                 string returnStr = "";
 
                 returnStr += "[Boot Code]\n\n" + bootCode + "\n\n";
-                returnStr += "[Fat Copy Path] " + fullFatCopyPath + "\n\n";
+                if (System.IO.File.Exists(fatCopyPath)) returnStr += "[Fat Copy]\n" + System.IO.File.ReadAllText(fatCopyPath) + "\n\n";
                 returnStr += "[Clusters]\n\n";
 
                 int i = 0;
@@ -127,11 +112,13 @@ namespace FAT
         public Metadata metadata { get; set; }
         public Data data { get; set; }
 
-        public Fat(int clusterSize, string fatCopyPath)
+        public Fat(int clusterSize)
         {
-            metadata = new Metadata(fatCopyPath);
+            metadata = new Metadata();
             data = new Data();
             this.clusterSize = clusterSize;
+
+            metadata.bootCode.recalculateMagicNumber(this);
         }
 
         [JsonConstructor]
@@ -149,21 +136,25 @@ namespace FAT
 
         private int findDirectoryCluster(string fullPath)
         {
-            string path = fullPath.Replace("C:/", "");
+            string path = fullPath.Replace("C:", "");
             string[] routing = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
             int cluster = -1;
 
-            if (routing.Length > 0)
+            try
             {
-                cluster = (metadata.rootDirectory.entries.Exists(e => e.name == routing[0])) ? metadata.rootDirectory.entries.Find(e => e.name == routing[0]).startingCluster : -1;
-                if (cluster == -1) return -2;
-                for (int i = 1; i < routing.Length; i++)
+                if (routing.Length > 0)
                 {
-                    FAT.Data.Directory d = (FAT.Data.Directory)data.clusters[cluster];
-                    cluster = (d.entries.Exists(e => e.name == routing[i])) ? d.entries.Find(e => e.name == routing[i]).startingCluster : -1;
+                    cluster = (metadata.rootDirectory.entries.Exists(e => e.name == routing[0])) ? metadata.rootDirectory.entries.Find(e => e.name == routing[0]).startingCluster : -1;
                     if (cluster == -1) return -2;
+                    for (int i = 1; i < routing.Length; i++)
+                    {
+                        FAT.Data.Directory d = (FAT.Data.Directory)data.clusters[cluster];
+                        cluster = (d.entries.Exists(e => e.name == routing[i])) ? d.entries.Find(e => e.name == routing[i]).startingCluster : -1;
+                        if (cluster == -1) return -2;
+                    }
                 }
             }
+            catch{ return -2; }
 
             return cluster;
         }
@@ -194,6 +185,7 @@ namespace FAT
             if (directoryCluster == -1) metadata.rootDirectory.entries.Add(new Entry(name, "", metadata.clusters.IndexOf(cluster)));
             else ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Add(new Entry(name, "", metadata.clusters.IndexOf(cluster)));
 
+            metadata.bootCode.recalculateMagicNumber(this);
             return true;
         }
 
@@ -239,6 +231,8 @@ namespace FAT
                     }
                 }
             }
+
+            metadata.bootCode.recalculateMagicNumber(this);
             return true;
         }
 
@@ -267,6 +261,7 @@ namespace FAT
             if (newDirectoryCluster == -1) metadata.rootDirectory.entries.Add(new Entry(newName, "", directoryEntry.startingCluster));
             else ((FAT.Data.Directory)data.clusters[newDirectoryCluster]).entries.Add(new Entry(newName, "", directoryEntry.startingCluster));
 
+            metadata.bootCode.recalculateMagicNumber(this);
             return true;
         }
 
@@ -297,6 +292,7 @@ namespace FAT
                 else copyFile(path + "/" + name, e.name, newPath + "/" + newName, e.name);
             }
 
+            metadata.bootCode.recalculateMagicNumber(this);
             return true;
         }
 
@@ -350,6 +346,7 @@ namespace FAT
             if (directoryCluster == -1) metadata.rootDirectory.entries.Add(new Entry(fileName, fileType, metadata.clusters.IndexOf(cluster)));
             else ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Add(new Entry(fileName, fileType, metadata.clusters.IndexOf(cluster)));
 
+            metadata.bootCode.recalculateMagicNumber(this);
             return true;
         }
 
@@ -384,6 +381,7 @@ namespace FAT
             if (directoryCluster == -1) metadata.rootDirectory.entries.Remove(metadata.rootDirectory.entries.Find(x => x.name == fileName && x.type == fileType));
             else ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Remove(((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Find(x => x.name == fileName && x.type == fileType));
 
+            metadata.bootCode.recalculateMagicNumber(this);
             return true;
         }
 
@@ -416,6 +414,7 @@ namespace FAT
             if (newDirectoryCluster == -1) metadata.rootDirectory.entries.Add(new Entry(newfileName, newfileType, fileEntry.startingCluster));
             else ((FAT.Data.Directory)data.clusters[newDirectoryCluster]).entries.Add(new Entry(newfileName, newfileType, fileEntry.startingCluster));
 
+            metadata.bootCode.recalculateMagicNumber(this);
             return true;
         }
 
@@ -448,6 +447,7 @@ namespace FAT
                 return false;
             }
 
+            metadata.bootCode.recalculateMagicNumber(this);
             return true;
         }
 
@@ -523,6 +523,7 @@ namespace FAT
                 }
             }
 
+            metadata.bootCode.recalculateMagicNumber(this);
             return true;
         }
 

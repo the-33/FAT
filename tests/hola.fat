@@ -1,0 +1,16 @@
+{
+  "clusterSize": 64,
+  "metadata": {
+    "bootCode": {
+      "magicNumber": "CDEE4FA198A26D318FB4E0C6B88610CB"
+    },
+    "fatCopyPath": "C:\\USJ\\Segundo\\Sistemas Operativos\\FAT\\tests\\hola.fatcpy",
+    "clusters": [],
+    "rootDirectory": {
+      "entries": []
+    }
+  },
+  "data": {
+    "clusters": []
+  }
+}

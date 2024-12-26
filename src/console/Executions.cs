@@ -156,6 +156,7 @@ namespace Terminal
 
         public Func<string?[], Fat, string> catExecution = (args, fat) =>
         {
+
             return "";
         };
 
