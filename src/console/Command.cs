@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FAT;
 using static Formatter.CommFormatter;
 using static Crayon.Output;
+using System.Runtime.CompilerServices;
 
 namespace Terminal
 {
@@ -23,10 +24,11 @@ namespace Terminal
         public string explanation { get; set; }
         public string options { get; set; }
         public string notes { get; set; }
-        private Func<string?[], Fat, string> execution { get; set; }
+        private Func<string?[], Fat, string, string> execution { get; set; }
 
-        public Command(string pathToDSC, Func<string?[], Fat, string> execution)
+        public Command(string pathToDSC, Func<string?[], Fat, string, string> execution)
         {
+
             name = "";
             format = "";
             description = "";
@@ -113,14 +115,12 @@ namespace Terminal
             }
         }
 
-        public void execute(string?[] args, Fat fat, ref bool exit)
+        public string execute(string?[] args, Fat fat, string wD)
         {
-            if (args.Length == 1 && args[0] == "--help") help();
+            if (args.Contains("--help")) { help(); return ""; }
             else
             {
-                string result = execution(args, fat);
-                if (result == "[EXIT]") exit = true;
-                else if (result != "") Console.WriteLine(result);
+                return execution(args, fat, wD);
             }
         }
 

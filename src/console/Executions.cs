@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -25,22 +26,49 @@ namespace Terminal
 
     public class Executions
     {
-        public Func<string?[], Fat, string> cdExecution = (args, fat) =>
+        public static string getRealPath(string path, string wD)
+        {
+            string realPath = "";
+            Stack<string> realPathStack = new Stack<string>();
+
+            if (path.StartsWith(".") || path.StartsWith(".."))
+            {
+                foreach (string s in wD.Split("/")) realPathStack.Push(s);
+
+                foreach (string s in path.Split("/"))
+                {
+                    switch (s)
+                    {
+                        case ".": continue;
+                        case "..": realPathStack.Pop(); break;
+                        default: realPathStack.Push(s); break;
+                    }
+                }
+
+                realPath = string.Join('/', realPathStack.ToArray());
+            }
+            else if (realPath.StartsWith("C:/")) realPath = path;
+            else realPath = wD + "/" + path;
+
+            return realPath;
+        }
+
+        public Func<string?[], Fat, string, string> cdExecution = (args, fat, wD) =>
         {
             return "";
         };
 
-        public Func<string?[], Fat, string> lsExecution = (args, fat) =>
+        public Func<string?[], Fat, string, string> lsExecution = (args, fat, wD) =>
         {
             return "";
         };
 
-        public Func<string?[], Fat, string> pwdExecution = (args, fat) =>
+        public Func<string?[], Fat, string, string> pwdExecution = (args, fat, wD) =>
         {
             return "";
         };
 
-        public Func<string?[], Fat, string> mkdirExecution = (args, fat) =>
+        public Func<string?[], Fat, string, string> mkdirExecution = (args, fat, wD) =>
         {
             //string regexPattern = @"^[a-zA-Z0-9_-]+$";
             //if (!Regex.IsMatch(name, regexPattern)) Console.WriteLine(Bold().Red().Text("Names can only contain alpanumeric characters and '-' or '_'."));
@@ -48,7 +76,7 @@ namespace Terminal
             return "";
         };
 
-        public Func<string?[], Fat, string> rmdirExecution = (args, fat) =>
+        public Func<string?[], Fat, string, string> rmdirExecution = (args, fat, wD) =>
         {
             //if (name.Contains('*'))
             //{
@@ -73,17 +101,17 @@ namespace Terminal
             return "";
         };
 
-        public Func<string?[], Fat, string> rmExecution = (args, fat) =>
+        public Func<string?[], Fat, string, string> rmExecution = (args, fat, wD) =>
         {
             return "";
         };
 
-        public Func<string?[], Fat, string> cpExecution = (args, fat) =>
+        public Func<string?[], Fat, string, string> cpExecution = (args, fat, wD) =>
         {
             return "";
         };
 
-        public Func<string?[], Fat, string> mvExecution = (args, fat) =>
+        public Func<string?[], Fat, string, string> mvExecution = (args, fat, wD) =>
         {
             //if (name.Contains('*'))
             //{
@@ -134,60 +162,109 @@ namespace Terminal
             return "";
         };
 
-        public Func<string?[], Fat, string> touchExecution = (args, fat) =>
+        public Func<string?[], Fat, string, string> touchExecution = (args, fat, wD) =>
         {
             return "";
         };
 
-        public Func<string?[], Fat, string> fileExecution = (args, fat) =>
+        public Func<string?[], Fat, string, string> fileExecution = (args, fat, wD) =>
         {
             return "";
         };
 
-        public Func<string?[], Fat, string> findExecution = (args, fat) =>
+        public Func<string?[], Fat, string, string> findExecution = (args, fat, wD) =>
         {
             return "";
         };
 
-        public Func<string?[], Fat, string> locateExecution = (args, fat) =>
+        public Func<string?[], Fat, string, string> locateExecution = (args, fat, wD) =>
         {
             return "";
         };
 
-        public Func<string?[], Fat, string> catExecution = (args, fat) =>
+        public Func<string?[], Fat, string, string> catExecution = (args, fat, wD) =>
         {
+            bool showEnds = false;
+            bool showTabs = false;
+            bool squeezeBlank = false;
+            bool number = false;
 
+            List<string[]> files = new List<string[]>();
+
+            foreach(string arg in args)
+            {
+                switch(arg)
+                {
+                    case "-A":
+                    case "--show-all":
+                        showEnds = true;
+                        showTabs = true;
+                        break;
+                    case "-E":
+                    case "--show-ends":
+                        showEnds = true;
+                        break;
+                    case "-n":
+                    case "--number":
+                        number = true;
+                        break;
+                    case "-s":
+                    case "--squeeze-blank":
+                        squeezeBlank = true;
+                        break;
+                    case "-T":
+                    case "--show-tabs":
+                        showTabs = true;
+                        break;
+                    default:
+                        if (arg.StartsWith("-") || arg.StartsWith("--")) throw new Exception($"");
+                        string name = arg.Split('/').Last();
+                        string path = getRealPath(arg.Replace(name, ""), wD);
+                        if (fat.fileExists(name, path)) files.Add(new string[] { name, path });
+                        else throw new Exception($"");
+                        break;
+                }
+            }
+
+            string output = "";
+
+            foreach(string[] file in files)
+            {
+                output += fat.catFile(file[0], file[1]);
+            }
+
+            return output;
+        };
+
+        public Func<string?[], Fat, string, string> grepExecution = (args, fat, wD) =>
+        {
             return "";
         };
 
-        public Func<string?[], Fat, string> grepExecution = (args, fat) =>
+        public Func<string?[], Fat, string, string> nanoExecution = (args, fat, wD) =>
         {
             return "";
         };
 
-        public Func<string?[], Fat, string> nanoExecution = (args, fat) =>
+        public Func<string?[], Fat, string, string> helpExecution = (args, fat, wD) =>
         {
             return "";
         };
 
-        public Func<string?[], Fat, string> helpExecution = (args, fat) =>
-        {
-            return "";
-        };
-
-        public Func<string?[], Fat, string> exitExecution = (args, fat) =>
+        public Func<string?[], Fat, string, string> exitExecution = (args, fat, wD) =>
         {
             Console.WriteLine(Dim().Text("Exiting..."));
-            return "[EXIT]";
+            throw new Exception("[EXIT]");
+            return "";
         };
 
-        public Func<string?[], Fat, string> clsExecution = (args, fat) =>
+        public Func<string?[], Fat, string, string> clsExecution = (args, fat, wD) =>
         {
             Console.Clear();
             return "";
         };
 
-        public Func<string?[], Fat, string> echoExecution = (args, fat) =>
+        public Func<string?[], Fat, string, string> echoExecution = (args, fat, wD) =>
         {
             return "";
         };

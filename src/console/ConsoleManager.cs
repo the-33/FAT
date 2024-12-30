@@ -8,6 +8,11 @@ using FAT;
 using static Crayon.Output;
 using System.Threading;
 using System.Threading.Tasks;
+using Crayon;
+using System.Windows.Documents;
+using System.Diagnostics.Eventing.Reader;
+using System.Runtime.InteropServices;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
 namespace Terminal
 {
@@ -21,20 +26,23 @@ namespace Terminal
     {
         private Dictionary<string, Command> path;
         private Executions exec;
-        public List<Task> taskList;
+        public List<Process> taskList;
         private int pidCounter;
+        public bool exit {  get; set; }
 
         public ConsoleManager(string descPath, string descFileType)
         {
             // Para saber que hace cada comando consultar https://en.wikibooks.org/wiki/Linux_Guide/Linux_commands
             // O escribir "comando" --help en una maquina linux, si tienes windows consultar https://apps.microsoft.com/detail/9pdxgncfsczv?rtc=1&hl=es-es&gl=ES
 
+            exit = false;
+
             exec = new();
+
             taskList = new();
-
-            taskList.Add(new(0, new(), "Terminal.exe"));
+            taskList.Add(new(0, new(), "Terminal.exe", null));
             pidCounter = 1;
-
+            
             path = new Dictionary<string, Command>()
             {
                 { "cd", new Command(descPath + "cd" + descFileType, exec.cdExecution) }, // https://en.wikibooks.org/wiki/Guide_to_Unix/Commands/File_System_Utilities#cd
@@ -58,31 +66,344 @@ namespace Terminal
                 { "exit", new Command(descPath + "exit" + descFileType, exec.exitExecution) }, // Detiene la ejecucion del programa
                 { "echo", new Command(descPath + "echo" + descFileType, exec.echoExecution) }, // Detiene la ejecucion del programa
             };
+
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                while(!exit)
+                {
+                    Process? p = taskList.Find(x => x.dead);
+                    if (p != null) taskList.Remove(p);
+                }
+            });
         }
 
-        public void execute(string command, string?[] args, Fat fat, ref bool exit)
+
+        public void execute(string s, Fat fat, string wD)
         {
-            if (path.ContainsKey(command)) path[command].execute(args, fat, ref exit);
-            else if (command.EndsWith(".sh") && args[0] == "") newTask(command, fat);
-            else if (command.EndsWith(".sh") && (args.Length == 1) && (args[0] == "&")) System.Threading.Tasks.Task.Run(() => newTask(command, fat));
-            else Console.WriteLine(Red().Bold().Text("The command " + command + " was not found, to get a list of all avaliable commands type 'help'"));
-            
+            List<string> lines = new();
+            List<string> l = new();
+
+            foreach(string sPart in s.Split(" ", StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (sPart == ";")
+                {
+                    lines.Add(string.Join(" ", l));
+                    l.Clear();
+                }
+                else l.Add(sPart);
+            }
+
+            if(l.Count > 0) { lines.Add(string.Join(" ", l)); l.Clear(); }
+
+            foreach(string line in lines)
+            {
+                if (s.Contains("&&") || s.Contains("|"))
+                {
+                    List<string> chainedLines = new();
+                    List<string> chains = new();
+                    bool background = false;
+
+                    foreach(string lPart in line.Split(" ", StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        if (lPart == "&&" || lPart == "|")
+                        {
+                            if (l.Last() == "&") { Console.WriteLine($"-Terminal: Unexpected token '&' before '{lPart}'"); return; }
+                            chainedLines.Add(string.Join(" ", l));
+                            chains.Add(lPart);
+                            l.Clear();
+                        }
+                        else l.Add(lPart);
+                    }
+
+                    if (l.Count() > 0)
+                    {
+                        if (l.Last() == "&")
+                        {
+                            background = true;
+                            l.Remove(l.Last());
+                        }
+
+                        chainedLines.Add(string.Join(" ", l));
+                    }
+                    else { Console.WriteLine($"-Terminal: Unexpected token '{line.Split(" ", StringSplitOptions.RemoveEmptyEntries).Last()}' at the end"); return; }
+
+                    List<string> chainedCommands = new();
+                    List<List<string>> chainedArgs = new();
+
+                    foreach(string chainedLine in chainedLines)
+                    {
+                        string command = chainedLine.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
+                        List<string> args = new();
+                        if (chainedLine.Length > command.Length)
+                        {
+                            args = ((chainedLine.Substring(command.Length)).Split(' ', StringSplitOptions.RemoveEmptyEntries)).ToList();
+                        }
+
+                        if(!path.ContainsKey(command)) { Console.WriteLine(Red().Bold().Text($"{s}: command not found, to get a list of all avaliable commands type 'help'")); return; }
+                        else
+                        {
+                            string name = command.Split('/').Last();
+                            string path = getRealPath(command.Replace(name, ""), wD);
+
+                            if (!command.EndsWith(".sh") || !fat.fileExists(name, path)) { Console.WriteLine(Red().Bold().Text($"{s}: command not found, to get a list of all avaliable commands type 'help'")); return; }
+                        }
+
+                        chainedCommands.Add(command);
+                        chainedArgs.Add(args);
+                    }
+
+                    bool success = true;
+                    string? previousOutput = null;
+                    chains.Add("end");
+
+                    int pid = pidCounter;
+                    pidCounter++;
+                    taskList.Add(new(pid, null, line, null));
+
+                    if (background)
+                    {
+                        Console.WriteLine($"[1] {pid}");
+
+                        System.Threading.Tasks.Task.Run(() =>
+                        {
+                            for(int i = 0; i<chainedCommands.Count() && success; i++)
+                            {
+                                if (previousOutput != null) chainedArgs[i].Insert(0, previousOutput);
+                                (success, previousOutput) = executeLine(chainedCommands[i], chainedArgs[i], fat, wD, chains[i] != "|", taskList.Find(x => x.pid == pid));
+                                if (chains[i] != "|") previousOutput = null;
+                            }
+
+                            if (success) Console.WriteLine($"[1]+  Done\t\t\t{line}");
+                            else Console.WriteLine($"[1]+  Exit 1\t\t\t{line}");
+                            taskList.Find(x => x.pid == pid).dead = true;
+                        });
+                        return;
+                    }
+                    else
+                    {
+                        for (int i = 0; i < chainedCommands.Count() && success; i++)
+                        {
+                            if (previousOutput != null) chainedArgs[i].Insert(0, previousOutput);
+                            (success, previousOutput) = executeLine(chainedCommands[i], chainedArgs[i], fat, wD, chains[i] != "|", taskList.Find(x => x.pid == pid));
+                            if (chains[i] != "|") previousOutput = null;
+                        }
+
+                        taskList.Find(x => x.pid == pid).dead = true;
+                        return;
+                    }
+                }
+                else
+                {
+                    executeLine(line, fat, wD);
+                }
+            }
         }
 
-        public void newTask(string fullPath, Fat fat)
+        private (bool success, string output) executeLine(string command, List<string> args, Fat fat, string wD, bool writeOutput = true, Process? parent = null)
         {
-            string name = fullPath.Split('/').Last();
-            string path = fullPath.Replace(name, "");
+            bool background = false;
 
-            if (fat.fileExists(name, path))
+            if (path.ContainsKey(command))
             {
                 int pid = pidCounter;
                 pidCounter++;
-                
-                taskList.Add(new(pid, fat.catFile(name, path).Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList(), name));
-                taskList.Find(x => x.pid == pid).Execute();
-                taskList.Remove(taskList.Find(x => x.pid == pid));
+                taskList.Add(new(pid, null, command, parent));
+
+                if (background)
+                {
+                    Console.WriteLine($"[1] {pid}");
+
+                    System.Threading.Tasks.Task.Run(() =>
+                    {
+                        (bool success, string output) = executeCommand(command, args.ToArray(), fat, wD, writeOutput);
+                        if (success) Console.WriteLine($"[1]+  Done\t\t\t{command} {string.Join(' ', args)}");
+                        else Console.WriteLine($"[1]+  Exit 1\t\t\t{command} {string.Join(' ', args)}");
+                        taskList.Find(x => x.pid == pid).dead = true;
+                    });
+                    return (true, "");
+                }
+                else
+                {
+                    (bool success, string output) = executeCommand(command, args.ToArray(), fat, wD, writeOutput);
+                    taskList.Find(x => x.pid == pid).dead = true;
+                    return (success, output);
+                }
             }
+            else
+            {
+                string name = command.Split('/').Last();
+                string path = getRealPath(command.Replace(name, ""), wD);
+
+                if (command.EndsWith(".sh") && fat.fileExists(name, path))
+                {
+                    int pid = pidCounter;
+                    pidCounter++;
+                    taskList.Add(new(pid, fat.catFile(name, path).Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList(), name, parent));
+
+                    if (background)
+                    {
+                        Console.WriteLine($"[1] {pid}");
+
+                        System.Threading.Tasks.Task.Run(() =>
+                        {
+                            (bool success, string output) = executeFile(name, path, pid, args.ToArray(), wD, writeOutput);
+                            if (success) Console.WriteLine($"[1]+  Done\t\t\t{command} {string.Join(' ', args)}");
+                            else Console.WriteLine($"[1]+  Exit 1\t\t\t{command} {string.Join(' ', args)}");
+                            taskList.Find(x => x.pid == pid).dead = true;
+                        });
+                        return (true, "");
+                    }
+                    else
+                    {
+                        (bool success, string output) = executeFile(name, path, pid, args.ToArray(), wD, writeOutput);
+                        taskList.Find(x => x.pid == pid).dead = true;
+                        return (success, output);
+                    }
+                }
+                else { Console.WriteLine(Red().Bold().Text($"{command} {string.Join(' ', args)}: command not found, to get a list of all avaliable commands type 'help'")); return (false, ""); }
+            }
+        }
+
+        private (bool success, string output) executeLine(string s, Fat fat, string wD, bool writeOutput = true, Process? parent = null)
+        {
+            bool background = false;
+
+            string command = s.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
+            List<string> args = new();
+            if (s.Length > command.Length)
+            {
+                args = ((s.Substring(command.Length)).Split(' ', StringSplitOptions.RemoveEmptyEntries)).ToList();
+            }
+
+            if (args.Count > 0 && args.Last() == "&")
+            {
+                background = true;
+                args.Remove(args.Last());
+            }
+
+            if (path.ContainsKey(command))
+            {
+                int pid = pidCounter;
+                pidCounter++;
+                taskList.Add(new(pid, null, command, parent));
+
+                if (background)
+                {
+                    Console.WriteLine($"[1] {pid}");
+
+                    System.Threading.Tasks.Task.Run(() =>
+                    {
+                        (bool success, string output) = executeCommand(command, args.ToArray(), fat, wD, writeOutput);
+                        if (success) Console.WriteLine($"[1]+  Done\t\t\t{command} {string.Join(' ', args)}");
+                        else Console.WriteLine($"[1]+  Exit 1\t\t\t{command} {string.Join(' ', args)}");
+                        taskList.Find(x => x.pid == pid).dead = true;
+                    });
+                    return (true, "");
+                }
+                else
+                {
+                    (bool success, string output) = executeCommand(command, args.ToArray(), fat, wD, writeOutput);
+                    taskList.Find(x => x.pid == pid).dead = true;
+                    return (success, output);
+                }
+            }
+            else
+            {
+                string name = command.Split('/').Last();
+                string path = getRealPath(command.Replace(name, ""), wD);
+
+                if (command.EndsWith(".sh") && fat.fileExists(name, path))
+                {
+                    int pid = pidCounter;
+                    pidCounter++;
+                    taskList.Add(new(pid, fat.catFile(name, path).Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList(), name, parent));
+
+                    if (background)
+                    {
+                        Console.WriteLine($"[1] {pid}");
+
+                        System.Threading.Tasks.Task.Run(() =>
+                        {
+                            (bool success, string output) = executeFile(name, path, pid, args.ToArray(), wD, writeOutput);
+                            if (success) Console.WriteLine($"[1]+  Done\t\t\t{command} {string.Join(' ', args)}");
+                            else Console.WriteLine($"[1]+  Exit 1\t\t\t{command} {string.Join(' ', args)}");
+                            taskList.Find(x => x.pid == pid).dead = true;
+                        });
+                        return (true, "");
+                    }
+                    else
+                    {
+                        (bool success, string output) = executeFile(name, path, pid, args.ToArray(), wD, writeOutput);
+                        taskList.Find(x => x.pid == pid).dead = true;
+                        return (success, output);
+                    }
+                }
+                else { Console.WriteLine(Red().Bold().Text($"{s}: command not found, to get a list of all avaliable commands type 'help'")); return (false, ""); }
+            }
+        }
+
+        private (bool sucess, string output) executeCommand(string command, string[]? args, Fat fat, string wD, bool writeOutput)
+        {
+            string output = "";
+
+            try
+            {
+                output = path[command].execute(args, fat, wD);
+            }
+            catch (Exception e)
+            {
+                if (e.Message == "[EXIT]") { exit = true; }
+                else Console.WriteLine($"{command}: {e.Message}\nTry '{command} --help' for more information.");
+                return (false, "");
+            }
+
+            if (output != "" && writeOutput) Console.WriteLine(output);
+            return (true, output);
+        }
+
+        private (bool sucess, string output) executeFile(string name, string path, int pid, string[]? args, string wD, bool writeOutput)
+        {
+            string output = "";
+
+            try
+            {
+                output = taskList.Find(x => x.pid == pid).Execute(args);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"{path}/{name}: {e.Message}");
+                return (false, "");
+            }
+
+            if (output != "" && writeOutput) Console.WriteLine(output);
+            return (true, output);
+        }
+
+        private string getRealPath(string path, string wD)
+        {
+            string realPath = "";
+            Stack<string> realPathStack = new Stack<string>();
+
+            if (path.StartsWith(".") || path.StartsWith(".."))
+            {
+                foreach (string s in wD.Split("/")) realPathStack.Push(s);
+
+                foreach (string s in path.Split("/"))
+                {
+                    switch (s)
+                    {
+                        case ".": continue;
+                        case "..": realPathStack.Pop(); break;
+                        default: realPathStack.Push(s); break;
+                    }
+                }
+
+                realPath = string.Join('/', realPathStack.ToArray());
+            }
+            else if (realPath.StartsWith("C:/")) realPath = path;
+            else realPath = wD + "/" + path;
+
+            return realPath;
         }
     }
 }

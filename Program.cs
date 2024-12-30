@@ -250,7 +250,7 @@ class Program
         string? workingDirectory = "C:/", userName, computerName;
         bool exit = false;
 
-        using (Process process = new Process()) // Obtiene el nombre de usuario y el nombre del equipo
+        using (System.Diagnostics.Process process = new System.Diagnostics.Process()) // Obtiene el nombre de usuario y el nombre del equipo
         {
             process.StartInfo.FileName = "cmd.exe";
             process.StartInfo.Arguments = @"/c whoami";
@@ -265,14 +265,25 @@ class Program
             userName = output.Split('\\')[1].Substring(0, output.Split('\\')[1].Length - 2);
         }
 
+        System.Threading.Tasks.Task.Run(() =>
+        {
+            while (!exit) { exit = cM.exit; }
+        });
+
         while (!exit) // Bucle principal
         {
             //TODO: agregar colores
             Console.WriteLine(Red().Text("┌─[") + Green().Text(userName) + Yellow().Text("@") + Rgb(43, 91, 156).Text(computerName) + Red().Text("]─[") + Rgb(52, 117, 27).Text(workingDirectory) + Red().Text("]"));
             Console.Write(Red().Text("└───■") + Yellow().Text(" $ "));
 
-            command = Console.ReadLine();
-            if (command != null && command != "") CommandManager(command, cM, ref exit);
+            if(!exit)
+            {
+                command = Console.ReadLine();
+                if (!exit && command != null && command != "")
+                {
+                    cM.execute(command, fat, workingDirectory);
+                }
+            }
         }
 
         Console.Clear();
@@ -507,18 +518,6 @@ class Program
     #endregion
 
     #region AUXILIARY METHODS
-    static void CommandManager(string s, ConsoleManager cM, ref bool exit)
-    {
-        //Un comando tendra el formato "COMANDO ARGUMENTOS FLAGS donde PARAMETROS sera una lista de parametros variable del tipo -FLAG ARGUMENTOS"
-        string command = s.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
-        string?[] args = { "" };
-        if (s.Length > command.Length)
-        {
-            args = (s.Substring(command.Length)).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        }
-        cM.execute(command, args, fat, ref exit);
-    }
-
     static void PrintMenu(string[] options, int selected, string message, int hOffset, int vOffset, string bottomMessage)
     {
         if(selected < 0 || selected >= options.Length)
