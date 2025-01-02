@@ -24,9 +24,9 @@ namespace Terminal
         public string explanation { get; set; }
         public string options { get; set; }
         public string notes { get; set; }
-        private Func<string?[], Fat, string, string> execution { get; set; }
+        private Func<string?[], Fat, string, string[]> execution { get; set; }
 
-        public Command(string pathToDSC, Func<string?[], Fat, string, string> execution)
+        public Command(string pathToDSC, Func<string?[], Fat, string, string[]> execution)
         {
 
             name = "";
@@ -56,45 +56,57 @@ namespace Terminal
                 {
                     if (line == "#NAME#") // Obligatoria
                     {
+                        List<string> lines = new();
                         while ((line = sr.ReadLine()) != null && !(line.StartsWith('#') && line.EndsWith('#')))
                         {
-                            if (!line.StartsWith("##") && line != "") name = format(line);
+                            if (!line.StartsWith("##") && line != "") lines.Add(format(line));
                         }
+                        name = string.Join("\n", lines);
                     }
                     else if (line == "#FORMAT#") // Obligatoria
                     {
+                        List<string> lines = new();
                         while ((line = sr.ReadLine()) != null && !(line.StartsWith('#') && line.EndsWith('#')))
                         {
-                            if (!line.StartsWith("##") && line != "") format = format(line);
+                            if (!line.StartsWith("##") && line != "") lines.Add(format(line));
                         }
+                        format = string.Join("\n", lines);
                     }
                     else if (line == "#DESCRIPTION#") // Obligatoria
                     {
+                        List<string> lines = new();
                         while ((line = sr.ReadLine()) != null && !(line.StartsWith('#') && line.EndsWith('#')))
                         {
-                            if (!line.StartsWith("##") && line != "") description += format(line);
+                            if (!line.StartsWith("##") && line != "") lines.Add(format(line));
                         }
+                        description = string.Join("\n", lines);
                     }
                     else if (line == "#EXPLANATION#")
                     {
+                        List<string> lines = new();
                         while ((line = sr.ReadLine()) != null && !(line.StartsWith('#') && line.EndsWith('#')))
                         {
-                            if (!line.StartsWith("##") && line != "") explanation += format(line);
+                            if (!line.StartsWith("##") && line != "") lines.Add(format(line));
                         }
+                        explanation = string.Join("\n", lines);
                     }
                     else if (line == "#OPTIONS#")
                     {
+                        List<string> lines = new();
                         while ((line = sr.ReadLine()) != null && !(line.StartsWith('#') && line.EndsWith('#')))
                         {
-                            if (!line.StartsWith("##") && line != "") options += format(line);
+                            if (!line.StartsWith("##") && line != "") lines.Add(format(line));
                         }
+                        options = string.Join("\n", lines);
                     }
                     else if (line == "#NOTES#")
                     {
+                        List<string> lines = new();
                         while ((line = sr.ReadLine()) != null && !(line.StartsWith('#') && line.EndsWith('#')))
                         {
-                            if (!line.StartsWith("##") && line != "") notes += format(line);
+                            if (!line.StartsWith("##") && line != "") lines.Add(format(line));
                         }
+                        notes = string.Join("\n", lines);
                     }
                     else line = sr.ReadLine();
                 }
@@ -107,7 +119,7 @@ namespace Terminal
             }
             catch (Exception e)
             {
-                Console.WriteLine(Bold().Red().Text("Error in " + pathToDSC + " file: " + e));
+                Console.WriteLine(Bold().Red().Text("Error in " + pathToDSC + " file: " + e.Message));
             }
             finally
             {
@@ -115,9 +127,9 @@ namespace Terminal
             }
         }
 
-        public string execute(string?[] args, Fat fat, string wD)
+        public string[] execute(string?[] args, Fat fat, string wD)
         {
-            if (args.Contains("--help")) { help(); return ""; }
+            if (args.Contains("--help")) { help(); return new string[] { "" }; }
             else
             {
                 return execution(args, fat, wD);
@@ -126,15 +138,25 @@ namespace Terminal
 
         public void help()
         {
-            print(name);
-            print(format);
-            print(description + "\n");
-            if(explanation != "" && (options != "" || notes != "")) print(explanation + "\n");
-            else print(explanation);
-            if (options != "" && notes != "") print(options + "\n");
-            else print(options);
+            print(name + "\n");
+            print(format + "\n");
+
+            if (explanation != "" || options != "" || notes != "") print(description + "\n\n");
+            else print(description);
+
+            if (explanation != "")
+            {
+                if (options != "" || notes != "") print(explanation + "\n\n");
+                else print(explanation);
+            }
+
+            if (options != "")
+            {
+                if (notes != "") print(options + "\n\n");
+                else print(options);
+            }
+
             if (notes != "") print(notes);
-            Console.WriteLine();
         }
     }
 }

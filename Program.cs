@@ -174,6 +174,10 @@ class Program
 
     static void mainMenu(int selected = 0)
     {
+        Console.CancelKeyPress += delegate (object? sender, ConsoleCancelEventArgs e) {
+            e.Cancel = true;
+        };
+
         Console.Clear();
         Console.CursorVisible = false;
         Console.SetCursorPosition(Console.CursorLeft, Console.WindowTop + TITLE_VERTICAL_OFFSET);
@@ -182,7 +186,7 @@ class Program
 
         foreach (string s in TITLE)
         {
-            print(format(s), true);
+            print(format(s) + "\n", true);
         }
 
         PrintMenu(MENU_OPTIONS, selected, MENU_MESSAGE, MENU_HORIZONTAL_OFFSET, MENU_VERTICAL_OFFSET, MENU_BOTTOM_MESSAGE); // Para cambiar lo que muestra el menu hacerlo desde la region 'CONSTANTS'
@@ -240,6 +244,10 @@ class Program
 
     static void consoleEnvironment()
     {
+        Console.CancelKeyPress += delegate (object? sender, ConsoleCancelEventArgs e) {
+            e.Cancel = true;
+        };
+
         Console.Clear();
         Console.CursorVisible = true;
 
@@ -279,10 +287,8 @@ class Program
             if(!exit)
             {
                 command = Console.ReadLine();
-                if (!exit && command != null && command != "")
-                {
-                    cM.execute(command, fat, workingDirectory);
-                }
+                if (!exit && command != null && command != "") cM.execute(command, fat, workingDirectory);
+                Console.WriteLine();
             }
         }
 

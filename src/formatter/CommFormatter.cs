@@ -23,7 +23,7 @@ namespace Formatter
             result = result.Replace("#<#", "$lowerthan$");
             result = result.Replace("#>#", "$greaterthan$");
 
-            return result + "\n";
+            return result;
         }
 
         public static void print(string formatted, bool centered = false)

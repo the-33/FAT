@@ -9,7 +9,7 @@ namespace Terminal
     public class Process
     {
         public List<string>? instructions { get; set; }
-        public int programCounter {  get; set; }
+        public int programCounter { get; set; }
         public int pid { get; set; }
         public Process? parent { get; set; }
         public List<Process> sons { get; set; }
@@ -27,10 +27,17 @@ namespace Terminal
             sons = new List<Process>();
         }
 
-        public string Execute(string[]? args)
+        public string[] Execute(string[]? args)
         {
-            Console.WriteLine("hola");
-            return "";
+            bool exit = false;
+            string returnValue;
+
+            while(!exit)
+            {
+
+            }
+
+            return new string[] { "" };
         }
     }
 }

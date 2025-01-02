@@ -53,30 +53,30 @@ namespace Terminal
             return realPath;
         }
 
-        public Func<string?[], Fat, string, string> cdExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> cdExecution = (args, fat, wD) =>
         {
-            return "";
+            return new string[] { "" };
         };
 
-        public Func<string?[], Fat, string, string> lsExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> lsExecution = (args, fat, wD) =>
         {
-            return "";
+            return new string[] { "" };
         };
 
-        public Func<string?[], Fat, string, string> pwdExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> pwdExecution = (args, fat, wD) =>
         {
-            return "";
+            return new string[] { "" };
         };
 
-        public Func<string?[], Fat, string, string> mkdirExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> mkdirExecution = (args, fat, wD) =>
         {
             //string regexPattern = @"^[a-zA-Z0-9_-]+$";
             //if (!Regex.IsMatch(name, regexPattern)) Console.WriteLine(Bold().Red().Text("Names can only contain alpanumeric characters and '-' or '_'."));
 
-            return "";
+            return new string[] { "" };
         };
 
-        public Func<string?[], Fat, string, string> rmdirExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> rmdirExecution = (args, fat, wD) =>
         {
             //if (name.Contains('*'))
             //{
@@ -98,20 +98,20 @@ namespace Terminal
             //    }
             //}
 
-            return "";
+            return new string[] { "" };
         };
 
-        public Func<string?[], Fat, string, string> rmExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> rmExecution = (args, fat, wD) =>
         {
-            return "";
+            return new string[] { "" };
         };
 
-        public Func<string?[], Fat, string, string> cpExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> cpExecution = (args, fat, wD) =>
         {
-            return "";
+            return new string[] { "" };
         };
 
-        public Func<string?[], Fat, string, string> mvExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> mvExecution = (args, fat, wD) =>
         {
             //if (name.Contains('*'))
             //{
@@ -159,35 +159,36 @@ namespace Terminal
             //    }
             //}
 
-            return "";
+            return new string[] { "" };
         };
 
-        public Func<string?[], Fat, string, string> touchExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> touchExecution = (args, fat, wD) =>
         {
-            return "";
+            return new string[] { "" };
         };
 
-        public Func<string?[], Fat, string, string> fileExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> fileExecution = (args, fat, wD) =>
         {
-            return "";
+            return new string[] { "" };
         };
 
-        public Func<string?[], Fat, string, string> findExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> findExecution = (args, fat, wD) =>
         {
-            return "";
+            return new string[] { "" };
         };
 
-        public Func<string?[], Fat, string, string> locateExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> locateExecution = (args, fat, wD) =>
         {
-            return "";
+            return new string[] { "" };
         };
 
-        public Func<string?[], Fat, string, string> catExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> catExecution = (args, fat, wD) =>
         {
             bool showEnds = false;
             bool showTabs = false;
             bool squeezeBlank = false;
             bool number = false;
+            bool numberNonBlank = false;
 
             List<string[]> files = new List<string[]>();
 
@@ -216,57 +217,100 @@ namespace Terminal
                     case "--show-tabs":
                         showTabs = true;
                         break;
+                    case "-b":
+                    case "--number-nonblank":
+                        numberNonBlank = true;
+                        break;
                     default:
-                        if (arg.StartsWith("-") || arg.StartsWith("--")) throw new Exception($"");
+                        if (arg.StartsWith("-") || arg.StartsWith("--")) throw new Exception($"Invalid option '{arg}'");
                         string name = arg.Split('/').Last();
                         string path = getRealPath(arg.Replace(name, ""), wD);
                         if (fat.fileExists(name, path)) files.Add(new string[] { name, path });
-                        else throw new Exception($"");
+                        else
+                        {
+                            if(!fat.directoryExists(arg)) throw new Exception($"{arg}: Is a directory");
+                            else throw new Exception($"{arg}: No such file or directory");
+                        }
                         break;
                 }
             }
 
+            string input = "";
             string output = "";
 
-            foreach(string[] file in files)
+            foreach (string[] file in files)
             {
-                output += fat.catFile(file[0], file[1]);
+                input += fat.catFile(file[0], file[1]) + "\n";
             }
 
-            return output;
+            if (showEnds) input = input.Replace("\n", "$\n");
+            if (showTabs) input = input.Replace("\t", "^I");
+            if (squeezeBlank) input = string.Join("\n", input.Split("\n", StringSplitOptions.RemoveEmptyEntries));
+
+            if (numberNonBlank)
+            {
+                string[] lines = input.Split("\n");
+
+                if (lines.Length == 0) output = "\t1  " + input;
+                else
+                {
+                    int i = 1;
+                    List<string> outputList = new();
+                    foreach (string line in lines)
+                    {
+                        if (line != "" && (showEnds && line != "$")) { outputList.Add($"\t{i}  {line}"); i++; }
+                        else outputList.Add(line);
+                    }
+                    output = string.Join ("\n", outputList);
+                }
+            }
+            else if (number)
+            {
+                string[] lines = input.Split("\n");
+
+                if (lines.Length == 0) output = "\t1  " + input;
+                else
+                {
+                    List<string> outputList = new();
+                    for (int i = 0; i < lines.Length; i++) outputList.Add($"\t{i + 1}  {lines[i]}");
+                    output = string.Join("\n", outputList);
+                }
+            }
+            else output = (input);
+
+            return new string[] { output };
         };
 
-        public Func<string?[], Fat, string, string> grepExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> grepExecution = (args, fat, wD) =>
         {
-            return "";
+            return new string[] { "" };
         };
 
-        public Func<string?[], Fat, string, string> nanoExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> nanoExecution = (args, fat, wD) =>
         {
-            return "";
+            return new string[] { "" };
         };
 
-        public Func<string?[], Fat, string, string> helpExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> helpExecution = (args, fat, wD) =>
         {
-            return "";
+            return new string[] { "" };
         };
 
-        public Func<string?[], Fat, string, string> exitExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> exitExecution = (args, fat, wD) =>
         {
             Console.WriteLine(Dim().Text("Exiting..."));
             throw new Exception("[EXIT]");
-            return "";
         };
 
-        public Func<string?[], Fat, string, string> clsExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> clsExecution = (args, fat, wD) =>
         {
             Console.Clear();
-            return "";
+            return new string[] { "" };
         };
 
-        public Func<string?[], Fat, string, string> echoExecution = (args, fat, wD) =>
+        public Func<string?[], Fat, string, string[]> echoExecution = (args, fat, wD) =>
         {
-            return "";
+            return new string[] { "" };
         };
     }
 }

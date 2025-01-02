@@ -30,6 +30,8 @@ namespace Terminal
         private int pidCounter;
         public bool exit {  get; set; }
 
+        public const string EXECUTABLE_FILE_EXTENSION = ".sh";
+
         public ConsoleManager(string descPath, string descFileType)
         {
             // Para saber que hace cada comando consultar https://en.wikibooks.org/wiki/Linux_Guide/Linux_commands
@@ -71,12 +73,15 @@ namespace Terminal
             {
                 while(!exit)
                 {
-                    Process? p = taskList.Find(x => x.dead);
-                    if (p != null) taskList.Remove(p);
+                    try
+                    {
+                        Process? p = taskList.Find(x => x.dead);
+                        if (p != null) taskList.Remove(p);
+                    }
+                    catch { break; }
                 }
             });
         }
-
 
         public void execute(string s, Fat fat, string wD)
         {
@@ -97,7 +102,7 @@ namespace Terminal
 
             foreach(string line in lines)
             {
-                if (s.Contains("&&") || s.Contains("|"))
+                if (line.Contains("&&") || line.Contains("|"))
                 {
                     List<string> chainedLines = new();
                     List<string> chains = new();
@@ -107,7 +112,9 @@ namespace Terminal
                     {
                         if (lPart == "&&" || lPart == "|")
                         {
-                            if (l.Last() == "&") { Console.WriteLine($"-Terminal: Unexpected token '&' before '{lPart}'"); return; }
+                            if (l.Last() == "&") { Console.Write($"-Terminal: Unexpected token '&' before '{lPart}'"); return; }
+                            if (l.Exists(x => x == ">") && lPart == "|") { Console.Write($"-Terminal: Unexpected token '>' before '|'"); return; }
+                            if (l.Exists(x => x == ">>") && lPart == "|") { Console.Write($"-Terminal: Unexpected token '>>' before '|'"); return; }
                             chainedLines.Add(string.Join(" ", l));
                             chains.Add(lPart);
                             l.Clear();
@@ -125,35 +132,21 @@ namespace Terminal
 
                         chainedLines.Add(string.Join(" ", l));
                     }
-                    else { Console.WriteLine($"-Terminal: Unexpected token '{line.Split(" ", StringSplitOptions.RemoveEmptyEntries).Last()}' at the end"); return; }
+                    else { Console.Write($"-Terminal: Unexpected token '{line.Split(" ", StringSplitOptions.RemoveEmptyEntries).Last()}' at the end"); return; }
 
                     List<string> chainedCommands = new();
-                    List<List<string>> chainedArgs = new();
+                    List<List<string>?> chainedArgs = new();
 
                     foreach(string chainedLine in chainedLines)
                     {
-                        string command = chainedLine.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
-                        List<string> args = new();
-                        if (chainedLine.Length > command.Length)
-                        {
-                            args = ((chainedLine.Substring(command.Length)).Split(' ', StringSplitOptions.RemoveEmptyEntries)).ToList();
-                        }
-
-                        if(!path.ContainsKey(command)) { Console.WriteLine(Red().Bold().Text($"{s}: command not found, to get a list of all avaliable commands type 'help'")); return; }
-                        else
-                        {
-                            string name = command.Split('/').Last();
-                            string path = getRealPath(command.Replace(name, ""), wD);
-
-                            if (!command.EndsWith(".sh") || !fat.fileExists(name, path)) { Console.WriteLine(Red().Bold().Text($"{s}: command not found, to get a list of all avaliable commands type 'help'")); return; }
-                        }
+                        (string command, List<string>? args) = processCommand(chainedLine);
 
                         chainedCommands.Add(command);
                         chainedArgs.Add(args);
                     }
 
                     bool success = true;
-                    string? previousOutput = null;
+                    string[]? previousOutputs = null;
                     chains.Add("end");
 
                     int pid = pidCounter;
@@ -168,13 +161,13 @@ namespace Terminal
                         {
                             for(int i = 0; i<chainedCommands.Count() && success; i++)
                             {
-                                if (previousOutput != null) chainedArgs[i].Insert(0, previousOutput);
-                                (success, previousOutput) = executeLine(chainedCommands[i], chainedArgs[i], fat, wD, chains[i] != "|", taskList.Find(x => x.pid == pid));
-                                if (chains[i] != "|") previousOutput = null;
+                                if (previousOutputs != null) { if (chainedArgs[i] == null) chainedArgs[i] = new(); foreach (string previousOutput in previousOutputs) chainedArgs[i].Insert(0, previousOutput); }
+                                (success, previousOutputs) = executeLine(chainedCommands[i], chainedArgs[i], fat, wD, chains[i] != "|", taskList.Find(x => x.pid == pid));
+                                if (chains[i] != "|") previousOutputs = null;
                             }
 
-                            if (success) Console.WriteLine($"[1]+  Done\t\t\t{line}");
-                            else Console.WriteLine($"[1]+  Exit 1\t\t\t{line}");
+                            if (success) Console.Write($"[1]+  Done\t\t\t{line}");
+                            else Console.Write($"[1]+  Exit 1\t\t\t{line}");
                             taskList.Find(x => x.pid == pid).dead = true;
                         });
                         return;
@@ -183,9 +176,9 @@ namespace Terminal
                     {
                         for (int i = 0; i < chainedCommands.Count() && success; i++)
                         {
-                            if (previousOutput != null) chainedArgs[i].Insert(0, previousOutput);
-                            (success, previousOutput) = executeLine(chainedCommands[i], chainedArgs[i], fat, wD, chains[i] != "|", taskList.Find(x => x.pid == pid));
-                            if (chains[i] != "|") previousOutput = null;
+                            if (previousOutputs != null) { if (chainedArgs[i] == null) chainedArgs[i] = new(); foreach (string previousOutput in previousOutputs) chainedArgs[i].Insert(0, previousOutput); }
+                            (success, previousOutputs) = executeLine(chainedCommands[i], chainedArgs[i], fat, wD, chains[i] != "|", taskList.Find(x => x.pid == pid));
+                            if (chains[i] != "|") previousOutputs = null;
                         }
 
                         taskList.Find(x => x.pid == pid).dead = true;
@@ -199,88 +192,74 @@ namespace Terminal
             }
         }
 
-        private (bool success, string output) executeLine(string command, List<string> args, Fat fat, string wD, bool writeOutput = true, Process? parent = null)
+        private (bool success, string[] outputs) executeLine(string command, List<string>? args, Fat fat, string wD, bool writeOutput = true, Process? parent = null)
         {
             bool background = false;
+            bool redirectOutput = false;
+            string? outputRedirectionPath = null;
+            string? outputRedirectionName = null;
+            bool overwrite = false;
 
-            if (path.ContainsKey(command))
-            {
-                int pid = pidCounter;
-                pidCounter++;
-                taskList.Add(new(pid, null, command, parent));
-
-                if (background)
-                {
-                    Console.WriteLine($"[1] {pid}");
-
-                    System.Threading.Tasks.Task.Run(() =>
-                    {
-                        (bool success, string output) = executeCommand(command, args.ToArray(), fat, wD, writeOutput);
-                        if (success) Console.WriteLine($"[1]+  Done\t\t\t{command} {string.Join(' ', args)}");
-                        else Console.WriteLine($"[1]+  Exit 1\t\t\t{command} {string.Join(' ', args)}");
-                        taskList.Find(x => x.pid == pid).dead = true;
-                    });
-                    return (true, "");
-                }
-                else
-                {
-                    (bool success, string output) = executeCommand(command, args.ToArray(), fat, wD, writeOutput);
-                    taskList.Find(x => x.pid == pid).dead = true;
-                    return (success, output);
-                }
-            }
-            else
-            {
-                string name = command.Split('/').Last();
-                string path = getRealPath(command.Replace(name, ""), wD);
-
-                if (command.EndsWith(".sh") && fat.fileExists(name, path))
-                {
-                    int pid = pidCounter;
-                    pidCounter++;
-                    taskList.Add(new(pid, fat.catFile(name, path).Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList(), name, parent));
-
-                    if (background)
-                    {
-                        Console.WriteLine($"[1] {pid}");
-
-                        System.Threading.Tasks.Task.Run(() =>
-                        {
-                            (bool success, string output) = executeFile(name, path, pid, args.ToArray(), wD, writeOutput);
-                            if (success) Console.WriteLine($"[1]+  Done\t\t\t{command} {string.Join(' ', args)}");
-                            else Console.WriteLine($"[1]+  Exit 1\t\t\t{command} {string.Join(' ', args)}");
-                            taskList.Find(x => x.pid == pid).dead = true;
-                        });
-                        return (true, "");
-                    }
-                    else
-                    {
-                        (bool success, string output) = executeFile(name, path, pid, args.ToArray(), wD, writeOutput);
-                        taskList.Find(x => x.pid == pid).dead = true;
-                        return (success, output);
-                    }
-                }
-                else { Console.WriteLine(Red().Bold().Text($"{command} {string.Join(' ', args)}: command not found, to get a list of all avaliable commands type 'help'")); return (false, ""); }
-            }
-        }
-
-        private (bool success, string output) executeLine(string s, Fat fat, string wD, bool writeOutput = true, Process? parent = null)
-        {
-            bool background = false;
-
-            string command = s.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
-            List<string> args = new();
-            if (s.Length > command.Length)
-            {
-                args = ((s.Substring(command.Length)).Split(' ', StringSplitOptions.RemoveEmptyEntries)).ToList();
-            }
-
-            if (args.Count > 0 && args.Last() == "&")
+            if (args != null && args.Last() == "&")
             {
                 background = true;
                 args.Remove(args.Last());
             }
 
+            if (args != null && args.Exists(x => x == ">"))
+            {
+                string fullPath = getRealPath(args[args.IndexOf(args.FindAll(x => x == ">").Last()) + 1], wD);
+                string name = fullPath.Split('/').Last();
+                string path = getRealPath(fullPath.Replace(name, ""), wD);
+
+                if (fat.fileExists(name, path))
+                {
+                    redirectOutput = true;
+                    outputRedirectionPath = path;
+                    outputRedirectionName = name;
+                }
+                else
+                {
+                    if (fat.addFile(name, path))
+                    {
+                        redirectOutput = true;
+                        outputRedirectionPath = path;
+                        outputRedirectionName = name;
+                    }
+                    else { Console.Write($"Could not create file {args[args.IndexOf(args.FindAll(x => x == ">").Last()) + 1]}"); return (false, new string[] { "" }); }
+                }
+            }
+
+            if (args != null && args.Exists(x => x == ">>"))
+            {
+                if (redirectOutput)
+                {
+                    if (args.IndexOf(args.FindAll(x => x == ">").Last()) > args.IndexOf(args.FindAll(x => x == ">>").Last())) { Console.Write($"-Terminal: unexpected token '>'"); return (false, new string[] { "" }); }
+                    else { Console.Write($"-Terminal: unexpected token '>>'"); return (false, new string[] { "" }); }
+                }
+
+                string fullPath = getRealPath(args[args.IndexOf(args.FindAll(x => x == ">>").Last()) + 1], wD);
+                string name = fullPath.Split('/').Last();
+                string path = getRealPath(fullPath.Replace(name, ""), wD);
+
+                if (fat.fileExists(name, path))
+                {
+                    redirectOutput = true;
+                    outputRedirectionPath = path;
+                    outputRedirectionName = name;
+                }
+                else
+                {
+                    if (fat.addFile(name, path))
+                    {
+                        redirectOutput = true;
+                        outputRedirectionPath = path;
+                        outputRedirectionName = name;
+                    }
+                    else { Console.Write($"Could not create file {args[args.IndexOf(args.FindAll(x => x == ">>").Last()) + 1]}"); return (false, new string[] { "" }); }
+                }
+            }
+
             if (path.ContainsKey(command))
             {
                 int pid = pidCounter;
@@ -293,18 +272,36 @@ namespace Terminal
 
                     System.Threading.Tasks.Task.Run(() =>
                     {
-                        (bool success, string output) = executeCommand(command, args.ToArray(), fat, wD, writeOutput);
-                        if (success) Console.WriteLine($"[1]+  Done\t\t\t{command} {string.Join(' ', args)}");
-                        else Console.WriteLine($"[1]+  Exit 1\t\t\t{command} {string.Join(' ', args)}");
+                        bool success;
+                        string[] outputs;
+
+                        if (!redirectOutput) (success, outputs) = executeCommand(command, args.ToArray(), fat, wD, writeOutput);
+                        else
+                        {
+                            (success, outputs) = executeCommand(command, args.ToArray(), fat, wD, false);
+                            foreach (string output in outputs) fat.writeToFile(outputRedirectionName, outputRedirectionPath, output, overwrite);
+                        }
+
+                        if (success) Console.Write($"[1]+  Done\t\t\t{command} {string.Join(' ', args)}");
+                        else Console.Write($"[1]+  Exit 1\t\t\t{command} {string.Join(' ', args)}");
                         taskList.Find(x => x.pid == pid).dead = true;
                     });
-                    return (true, "");
+                    return (true, new string[] { "" });
                 }
                 else
                 {
-                    (bool success, string output) = executeCommand(command, args.ToArray(), fat, wD, writeOutput);
+                    bool success;
+                    string[] outputs;
+
+                    if (!redirectOutput) (success, outputs) = executeCommand(command, args.ToArray(), fat, wD, writeOutput);
+                    else
+                    {
+                        (success, outputs) = executeCommand(command, args.ToArray(), fat, wD, false);
+                        foreach (string output in outputs) fat.writeToFile(outputRedirectionName, outputRedirectionPath, output, overwrite);
+                    }
+
                     taskList.Find(x => x.pid == pid).dead = true;
-                    return (success, output);
+                    return (success, outputs);
                 }
             }
             else
@@ -312,7 +309,7 @@ namespace Terminal
                 string name = command.Split('/').Last();
                 string path = getRealPath(command.Replace(name, ""), wD);
 
-                if (command.EndsWith(".sh") && fat.fileExists(name, path))
+                if (command.EndsWith(EXECUTABLE_FILE_EXTENSION) && fat.fileExists(name, path))
                 {
                     int pid = pidCounter;
                     pidCounter++;
@@ -324,59 +321,268 @@ namespace Terminal
 
                         System.Threading.Tasks.Task.Run(() =>
                         {
-                            (bool success, string output) = executeFile(name, path, pid, args.ToArray(), wD, writeOutput);
-                            if (success) Console.WriteLine($"[1]+  Done\t\t\t{command} {string.Join(' ', args)}");
-                            else Console.WriteLine($"[1]+  Exit 1\t\t\t{command} {string.Join(' ', args)}");
+                            bool success;
+                            string[] outputs;
+
+                            if (!redirectOutput) (success, outputs) = executeFile(name, path, pid, args.ToArray(), wD, writeOutput);
+                            else
+                            {
+                                (success, outputs) = executeFile(name, path, pid, args.ToArray(), wD, false);
+                                foreach (string output in outputs) fat.writeToFile(outputRedirectionName, outputRedirectionPath, output, overwrite);
+                            }
+
+                            if (success) Console.Write($"[1]+  Done\t\t\t{command} {string.Join(' ', args)}");
+                            else Console.Write($"[1]+  Exit 1\t\t\t{command} {string.Join(' ', args)}");
                             taskList.Find(x => x.pid == pid).dead = true;
                         });
-                        return (true, "");
+                        return (true, new string[] { "" });
                     }
                     else
                     {
-                        (bool success, string output) = executeFile(name, path, pid, args.ToArray(), wD, writeOutput);
+                        bool success;
+                        string[] outputs;
+
+                        if (!redirectOutput) (success, outputs) = executeFile(name, path, pid, args.ToArray(), wD, writeOutput);
+                        else
+                        {
+                            (success, outputs) = executeFile(name, path, pid, args.ToArray(), wD, false);
+                            foreach (string output in outputs) fat.writeToFile(outputRedirectionName, outputRedirectionPath, output, overwrite);
+                        }
+
                         taskList.Find(x => x.pid == pid).dead = true;
-                        return (success, output);
+                        return (success, outputs);
                     }
                 }
-                else { Console.WriteLine(Red().Bold().Text($"{s}: command not found, to get a list of all avaliable commands type 'help'")); return (false, ""); }
+                else { Console.Write($"{command} {string.Join(" ", args)}: command not found, to get a list of all avaliable commands type 'help'"); return (false, new string[] { "" }); }
             }
         }
 
-        private (bool sucess, string output) executeCommand(string command, string[]? args, Fat fat, string wD, bool writeOutput)
+        private (bool success, string[] outputs) executeLine(string s, Fat fat, string wD, bool writeOutput = true, Process? parent = null)
         {
-            string output = "";
+            bool background = false;
+            bool redirectOutput = false;
+            string? outputRedirectionPath = null;
+            string? outputRedirectionName = null;
+            bool overwrite = false;
+
+            (string command, List<string>? args) = processCommand(s);
+
+            if (args != null && args.Last() == "&")
+            {
+                background = true;
+                args.Remove(args.Last());
+            }
+
+            if (args != null && args.Exists(x => x == ">"))
+            {
+                string fullPath = getRealPath(args[args.IndexOf(">") + 1], wD);
+                string name = fullPath.Split('/').Last();
+                string path = getRealPath(fullPath.Replace(name, ""), wD);
+
+                if (fat.fileExists(name, path))
+                {
+                    redirectOutput = true;
+                    outputRedirectionPath = path;
+                    outputRedirectionName = name;
+                }
+                else
+                {
+                    if (fat.addFile(name, path))
+                    {
+                        redirectOutput = true;
+                        outputRedirectionPath = path;
+                        outputRedirectionName = name;
+                    }
+                    else { Console.Write($"Could not create file {args.IndexOf(">") + 1}"); return (false, new string[] { "" }); }
+                }
+            }
+
+            if (args != null && args.Exists(x => x == ">>"))
+            {
+                if(redirectOutput)
+                {
+                    if(args.IndexOf(">") > args.IndexOf(">>")) { Console.Write($"-Terminal: unexpected token '>'"); return (false, new string[] { "" }); }
+                    else { Console.Write($"-Terminal: unexpected token '>>'"); return (false, new string[] { "" }); }
+                }
+
+                string fullPath = getRealPath(args[args.IndexOf(">") + 1], wD);
+                string name = fullPath.Split('/').Last();
+                string path = getRealPath(fullPath.Replace(name, ""), wD);
+
+                if (fat.fileExists(name, path))
+                {
+                    redirectOutput = true;
+                    outputRedirectionPath = path;
+                    outputRedirectionName = name;
+                }
+                else
+                {
+                    if (fat.addFile(name, path))
+                    {
+                        redirectOutput = true;
+                        outputRedirectionPath = path;
+                        outputRedirectionName = name;
+                    }
+                    else { Console.Write($"Could not create file {args.IndexOf(">") + 1}"); return (false, new string[] { "" }); }
+                }
+            }
+
+            if (path.ContainsKey(command))
+            {
+                int pid = pidCounter;
+                pidCounter++;
+                taskList.Add(new(pid, null, command, parent));
+
+                if (background)
+                {
+                    Console.WriteLine($"[1] {pid}");
+
+                    System.Threading.Tasks.Task.Run(() =>
+                    {
+                        bool success;
+                        string[] outputs;
+
+                        if (!redirectOutput) (success, outputs) = executeCommand(command, args.ToArray(), fat, wD, writeOutput);
+                        else
+                        {
+                            (success, outputs) = executeCommand(command, args.ToArray(), fat, wD, false);
+                            foreach (string output in outputs) fat.writeToFile(outputRedirectionName, outputRedirectionPath, output, overwrite);
+                        }
+
+                        if (success) Console.Write($"[1]+  Done\t\t\t{command} {string.Join(' ', args)}");
+                        else Console.Write($"[1]+  Exit 1\t\t\t{command} {string.Join(' ', args)}");
+                        taskList.Find(x => x.pid == pid).dead = true;
+                    });
+                    return (true, new string[] { "" });
+                }
+                else
+                {
+                    bool success;
+                    string[] outputs;
+
+                    if (!redirectOutput) (success, outputs) = executeCommand(command, args.ToArray(), fat, wD, writeOutput);
+                    else
+                    {
+                        (success, outputs) = executeCommand(command, args.ToArray(), fat, wD, false);
+                        foreach (string output in outputs) fat.writeToFile(outputRedirectionName, outputRedirectionPath, output, overwrite);
+                    }
+
+                    taskList.Find(x => x.pid == pid).dead = true;
+                    return (success, outputs);
+                }
+            }
+            else
+            {
+                string name = command.Split('/').Last();
+                string path = getRealPath(command.Replace(name, ""), wD);
+
+                if (command.EndsWith(EXECUTABLE_FILE_EXTENSION) && fat.fileExists(name, path))
+                {
+                    int pid = pidCounter;
+                    pidCounter++;
+                    taskList.Add(new(pid, fat.catFile(name, path).Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList(), name, parent));
+
+                    if (background)
+                    {
+                        Console.WriteLine($"[1] {pid}");
+
+                        System.Threading.Tasks.Task.Run(() =>
+                        {
+                            bool success;
+                            string[] outputs;
+
+                            if (!redirectOutput) (success, outputs) = executeFile(name, path, pid, args.ToArray(), wD, writeOutput);
+                            else
+                            {
+                                (success, outputs) = executeFile(name, path, pid, args.ToArray(), wD, false);
+                                foreach (string output in outputs) fat.writeToFile(outputRedirectionName, outputRedirectionPath, output, overwrite);
+                            }
+
+                            if (success) Console.Write($"[1]+  Done\t\t\t{command} {string.Join(' ', args)}");
+                            else Console.Write($"[1]+  Exit 1\t\t\t{command} {string.Join(' ', args)}");
+                            taskList.Find(x => x.pid == pid).dead = true;
+                        });
+                        return (true, new string[] { "" });
+                    }
+                    else
+                    {
+                        bool success;
+                        string[] outputs;
+
+                        if (!redirectOutput) (success, outputs) = executeFile(name, path, pid, args.ToArray(), wD, writeOutput);
+                        else
+                        {
+                            (success, outputs) = executeFile(name, path, pid, args.ToArray(), wD, false);
+                            foreach (string output in outputs) fat.writeToFile(outputRedirectionName, outputRedirectionPath, output, overwrite);
+                        }
+
+                        taskList.Find(x => x.pid == pid).dead = true;
+                        return (success, outputs);
+                    }
+                }
+                else { Console.Write($"{s}: command not found, to get a list of all avaliable commands type 'help'"); return (false, new string[] { "" }); }
+            }
+        }
+
+        private (bool sucess, string[] outputs) executeCommand(string command, string[]? args, Fat fat, string wD, bool writeOutput)
+        {
+            string[] outputs;
 
             try
             {
-                output = path[command].execute(args, fat, wD);
+                outputs = path[command].execute(args, fat, wD);
             }
             catch (Exception e)
             {
                 if (e.Message == "[EXIT]") { exit = true; }
-                else Console.WriteLine($"{command}: {e.Message}\nTry '{command} --help' for more information.");
-                return (false, "");
+                else Console.Write($"{command}: {e.Message}\nTry '{command} --help' for more information.");
+                return (false, new string[] { "" });
             }
 
-            if (output != "" && writeOutput) Console.WriteLine(output);
-            return (true, output);
+            foreach (string output in outputs) if (output != "" && writeOutput) Console.WriteLine(outputs);
+            return (true, outputs);
         }
 
-        private (bool sucess, string output) executeFile(string name, string path, int pid, string[]? args, string wD, bool writeOutput)
+        private (bool sucess, string[] outputs) executeFile(string name, string path, int pid, string[]? args, string wD, bool writeOutput)
         {
-            string output = "";
+            string[] outputs;
 
             try
             {
-                output = taskList.Find(x => x.pid == pid).Execute(args);
+                outputs = taskList.Find(x => x.pid == pid).Execute(args);
             }
             catch (Exception e)
             {
-                Console.WriteLine($"{path}/{name}: {e.Message}");
-                return (false, "");
+                Console.Write($"{path}/{name}: {e.Message}");
+                return (false, new string[] { "" });
             }
 
-            if (output != "" && writeOutput) Console.WriteLine(output);
-            return (true, output);
+            foreach (string output in outputs) if (output != "" && writeOutput) Console.WriteLine(outputs);
+            return (true, outputs);
+        }
+
+        private (string command, List<string>? args) processCommand(string s)
+        {
+            string command = s.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
+            List<string>? args = null;
+            string argsString = "";
+
+            if (s.Length > command.Length)
+            {
+                argsString = s.Substring(command.Length);
+            }
+
+            if (argsString != "")
+            {
+                args = new();
+                string arg = "";
+                foreach (char c in argsString)
+                {
+                    
+                }
+            }
+
+            return (command, args);
         }
 
         private string getRealPath(string path, string wD)
