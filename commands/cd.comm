@@ -1,13 +1,17 @@
 ##mandatory
 #NAME#
-
+<rainbow><u>cd</u></rainbow>
 #FORMAT#
-
+Usage: <b>cd color=GREEN>[DIRECTORY]</color></b>
 #DESCRIPTION#
-
+Changes the working <color=GREEN><b>DIRECTORY(s)</b></color>.
 ##optional
 #EXPLANATION#
-
+ Change the current <color=GREEN><b>DIRECTORY</b></color> to DIR.
 #OPTIONS#
-
+	<color=YELLOW>-L,<tab>--force-symbolic-links</color><tab>force symbolic links to be followed.
+	<color=YELLOW>-P,<tab>--physical</color><tab>use the physical directory structure without following
+                symbolic links.
+	<tab><color=YELLOW>--help</color><tab>display this help
 #NOTES#
+   
