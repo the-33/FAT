@@ -1,13 +1,20 @@
 ##mandatory
 #NAME#
-
+<rainbow><u>touch</u></rainbow>
 #FORMAT#
-
+Usage: <b>touch <color=YELLOW>[OPTION]</color></b>... <b><color=GREEN>[FILE]</color></b>...
 #DESCRIPTION#
-
+Changes the  <color=GREEN><b>access timestamps</b></color> of the specified file  .
 ##optional
 #EXPLANATION#
+When setting file timestamps to the current time, <color=GREEN><b>TOUCH</b></color> can change the timestamps for files that the user does not own but has write permission for.
 
 #OPTIONS#
+   <color=YELLOW>-d TIME,<tab>--date=TIME</color><tab>use <color=YELLOW>TIME</color> instead of the current time. It can coontain month names, time zones, 'am' and 'pm'. 
+   <color=YELLOW>-h,<tab>--no.dereference</color><tab>attemp to cahnge the timestamp of a symbolic link, instead of what the link referes to.
+   <color=YELLOW>-m,<tab>--time=mtime</color><tab>change the modification timestamp only.
+   <color=YELLOW>-r FILE,<tab>--reference=FILEk</color><tab>use the time of the reference <color=YELLOW>FILE</color> instead of the current time.
+   <color=YELLOW>-T,<tab>--show-tabs</color><tab>display <b>TAB</b> characters as <b>^I</b>
+   <tab><color=YELLOW>-t</color><tab>use the argument instead of the current time.
 
 #NOTES#
