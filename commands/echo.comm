@@ -1,13 +1,13 @@
 ##mandatory
 #NAME#
-
+<rainbow><u>echo</u></rainbow>
 #FORMAT#
-
+Usage: <b>echo ...
 #DESCRIPTION#
-
+Prints the text written in console.
 ##optional
 #EXPLANATION#
-
+The user types the text he wants to print.
 #OPTIONS#
 
 #NOTES#
