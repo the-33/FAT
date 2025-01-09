@@ -1,13 +1,13 @@
 ##mandatory
 #NAME#
-
+<rainbow><u>ls</u></rainbow>
 #FORMAT#
-
+Usage: <b>ls <b><color=GREEN>[DIRECTORY]</color></b>...
 #DESCRIPTION#
-
+Lists  <color=GREEN><b>FILE(s)</b></color> of a directory.
 ##optional
 #EXPLANATION#
-
+It lists all the <color=GREEN><b>FILES</b></color> in the <color=GREEN><b>DIRECTORY</b></color>
 #OPTIONS#
-
+	<color=YELLOW>-a,<tab>--all-files-links</color><tab>shows all files.
 #NOTES#
