@@ -1,13 +1,17 @@
 ##mandatory
 #NAME#
-
+<rainbow><u>mkdir</u></rainbow>
 #FORMAT#
-
+Usage: <b>mkdir <color=YELLOW>[OPTION]</color></b>... <b><color=GREEN>[NAME]</color></b>...
 #DESCRIPTION#
-
+<color=GREEN><b>'mkdir'</b></color> creates each directory <color=YELLOW><b>NAME</color></b> in the order given.
 ##optional
 #EXPLANATION#
-
+If a directory already exists, <color=GREEN><b>'mkdir'</b></color> will not create it again.
 #OPTIONS#
+ <color=YELLOW>-m MODE,<tab>--mode=MODEl</color><tab>sets the file permission to <color=YELLOW>MODE</color>, which uses the same syntax as in 'chmod'. Ignore existing parents directories and don't change their file permission.
+   <color=YELLOW>-p,<tab>--parents</color><tab>makes any missing directories for each argument, settings their file permission bits to 'u+wx'.
+   <color=YELLOW>-v,<tab>--verbose</color><tab>print a messge for each created directory. This is most useful witch "--parents".
+   <color=YELLOW>-s,<tab>--squeeze-blank</color><tab>supress repeated empty output lines
 
 #NOTES#
