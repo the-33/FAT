@@ -1,6 +1,6 @@
 ##mandatory
 #NAME#
-<rainbow><u>cmv</u></rainbow>
+<rainbow><u>mv</u></rainbow>
 #FORMAT#
 Usage:  <b>mv <color=YELLOW>[OPTION]</color></b>... <b><color=GREEN>[-T]</color></b> SOURCE DEST
 		<b>mv <color=YELLOW>[OPTION]</color></b>... <b><color=GREEN>SOURCE</color></b> ... <b><color=GREEN>DIRECTORY</color></b>...
