@@ -1,10 +1,10 @@
 ##mandatory
 #NAME#
-
+<rainbow><u>rm</u></rainbow>
 #FORMAT#
-
+Usage: <b>rm <b><color=GREEN>[FILE]</color></b>
 #DESCRIPTION#
-
+Deletes a <color=GREEN><b>FILE(s)</b></color> from the filesystem.
 ##optional
 #EXPLANATION#
 
