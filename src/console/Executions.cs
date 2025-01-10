@@ -66,12 +66,39 @@ namespace Terminal
 
         public Func<string[]?, string, string> cdExecution = (args, wD) =>
         {
+            if (args == null) throw new Exception("No directory specified");
+            if (args.Length > 1) throw new Exception("Too many arguments, expected one");
+
+            string name, path;
+            (name, path) = getRealPath(args[0], wD);
+
+            if (name.Contains(".") && Program.fat.fileExists(name, path)) throw new Exception($"'{path}/{name}' is a file");
+            else if (Program.fat.directoryExists(path + "/" + name)) Program.cM.envVars["PWD"] = path + name;
+            else throw new Exception($"{args[0]}: no such file or directory");
+
             return "";
         };
 
         public Func<string[]?, string, string> lsExecution = (args, wD) =>
         {
-            return "";
+            if (args != null && args.Length > 1) throw new Exception("Too many arguments, expected one");
+
+            string output = "";
+            if (args == null)
+            {
+                output = Program.fat.listDirectory(wD);
+            }
+            else
+            {
+                string name, path;
+                (name, path) = getRealPath(args[0], wD);
+
+                if (name.Contains(".") && Program.fat.fileExists(name, path)) throw new Exception($"'{path}/{name}' is a file");
+                else if (Program.fat.directoryExists(path + "/" + name)) output = Program.fat.listDirectory(path + "/" + name);
+                else throw new Exception($"{args[0]}: no such file or directory");
+            }
+
+            return output;
         };
 
         public Func<string[]?, string, string> pwdExecution = (args, wD) =>
@@ -132,31 +159,156 @@ namespace Terminal
 
         public Func<string[]?, string, string> rmdirExecution = (args, wD) =>
         {
-            //if (name.Contains('*'))
-            //{
-            //    string regexPattern = "^" + Regex.Escape(name).Replace("\\*", ".*") + "$";
-
-            //    if (directoryCluster == -1)
-            //    {
-            //        foreach (Entry e in metadata.RootDirectory.Entries)
-            //        {
-            //            if (Regex.IsMatch(e.Name, regexPattern) && e.Type == "") removeDirectory(path, e.Name);
-            //        }
-            //    }
-            //    else
-            //    {
-            //        foreach (Entry e in ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries)
-            //        {
-            //            if (Regex.IsMatch(e.Name, regexPattern) && e.Type == "") removeDirectory(path, e.Name);
-            //        }
-            //    }
-            //}
-
             return "";
         };
 
         public Func<string[]?, string, string> rmExecution = (args, wD) =>
         {
+            if (args == null) throw new Exception("No files or directories to remove specified");
+
+            bool force = false;
+            bool interactive = false;
+            bool INTERACTIVE = false;
+            bool recursive = false;
+            bool dir = false;
+            bool verbose = false;
+
+            List<string> files = new List<string>();
+
+            foreach (string arg in args)
+            {
+                switch (arg)
+                {
+                    case "-f":
+                    case "--force":
+                        force = true;
+                        break;
+                    case "-v":
+                    case "--verbose":
+                        verbose = true;
+                        break;
+                    case "-i":
+                        interactive = true;
+                        break;
+                    case "-I":
+                        INTERACTIVE = true;
+                        break;
+                    case "-r":
+                    case "-R":
+                    case "--recursive":
+                        recursive = true;
+                        break;
+                    case "-d":
+                    case "--dir":
+                        dir = true;
+                        break;
+                    default:
+                        files.Add(arg);
+                        break;
+                }
+            }
+
+            if (files.Count == 0) throw new Exception("No file(s) specified");
+
+            string destinationName, destinationPath;
+
+            foreach (string file in files)
+            {
+                string name, path;
+                (name, path) = getRealPath(file, wD);
+
+                if (name == "")
+                {
+                    if (Program.fat.directoryExists(path)) name = "*";
+                    else Console.WriteLine($"cat: {path}: No such directory");
+                }
+
+                if (name.Contains("*"))
+                {
+                    string regexPattern = "^" + Regex.Escape(name).Replace("\\*", ".*") + "$";
+                    foreach (string fileName in Program.fat.listDirectory(path).Split("   ", StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        List<string> toRemove = new();
+                        if (Regex.IsMatch(fileName, regexPattern))
+                        {
+                            toRemove.Add(fileName);
+                        }
+
+                        string response = "y";
+                        if(((toRemove.Count > 3 && INTERACTIVE) || interactive) && !force)
+                        {
+                            while (response != "y" || response != "n")
+                            {
+                                Console.WriteLine($"{toRemove.Count} file(s) or directories will be tried to delete, do you want to continue? (y/n)");
+                                response = Console.ReadLine();
+                            }
+                        }
+
+                        if(response == "y")
+                        {
+                            foreach(string s in toRemove)
+                            {
+                                if(s.Contains("."))
+                                {
+                                    Program.fat.removeFile(s, path);
+                                }
+                                else
+                                {
+                                    if (Program.fat.listDirectory(path + s).Split("   ", StringSplitOptions.RemoveEmptyEntries).Count() == 0)
+                                    {
+                                        if (dir) Program.fat.removeDirectory(path, s);
+                                        else Console.WriteLine($"Directory {path}/{s} is empty, try using option -d or --dir");
+                                    }
+                                    else
+                                    {
+                                        if (recursive) Program.fat.removeDirectory(path, s);
+                                        else Console.WriteLine($"Directory {path}/{s} is not empty, try using option -r, -R or --recursive");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (name.Contains("."))
+                {
+                    string response = "y";
+                    if (interactive && !force)
+                    {
+                        while (response != "y" || response != "n")
+                        {
+                            Console.WriteLine($"File {name} will be deleted, do you want to continue? (y/n)");
+                            response = Console.ReadLine();
+                        }
+                    }
+                    if (response == "y") Program.fat.removeFile(name, path);
+                }
+                else
+                {
+                    string response = "y";
+                    if (interactive && !force)
+                    {
+                        while (response != "y" || response != "n")
+                        {
+                            Console.WriteLine($"Directory {name} will be tried to delete, do you want to continue? (y/n)");
+                            response = Console.ReadLine();
+                        }
+                    }
+                    if (response == "y")
+                    {
+                        if (Program.fat.listDirectory(path + name).Split("   ", StringSplitOptions.RemoveEmptyEntries).Count() == 0)
+                        {
+                            if (dir) Program.fat.removeDirectory(path, name);
+                            else Console.WriteLine($"Directory {path}/{name} is empty, try using option -d or --dir");
+                        }
+                        else
+                        {
+                            if (recursive) Program.fat.removeDirectory(path, name);
+                            else Console.WriteLine($"Directory {path}/{name} is not empty, try using option -r, -R or --recursive");
+                        }
+                    }
+                }
+            }
+
             return "";
         };
 
@@ -258,8 +410,9 @@ namespace Terminal
                                         Console.WriteLine($"File '{destinationPath}/{destinationName}' will be overwritten, do you want to continue? (y/n)");
                                         response = Console.ReadLine();
                                     }
+                                    if (response == "n") continue;
                                 }
-                                Program.fat.moveFile(path, name, destinationPath, destinationName);
+                                Program.fat.moveFile(path, fileName, destinationPath, destinationName);
                                 if (verbose) Console.WriteLine($"mv: File {fileName} moved");
                             }
                         }
@@ -274,6 +427,7 @@ namespace Terminal
                                 Console.WriteLine($"File '{destinationPath}/{destinationName}' will be overwritten, do you want to continue? (y/n)");
                                 response = Console.ReadLine();
                             }
+                            if (response == "n") continue;
                         }
                         Program.fat.moveFile(path, name, destinationPath, destinationName);
                         if (verbose) Console.WriteLine($"mv: File {name} moved");
@@ -307,7 +461,7 @@ namespace Terminal
                             {
                                 if (fileName.Contains("."))
                                 {
-                                    if (Program.fat.fileExists(fileName, destinationName + "/" + destinationPath) && !force)
+                                    if (Program.fat.fileExists(fileName, destinationPath + "/" + destinationName) && !force)
                                     {
                                         string response = "";
                                         while (response != "y" || response != "n")
@@ -315,8 +469,9 @@ namespace Terminal
                                             Console.WriteLine($"File '{destinationPath}/{destinationName}/{fileName}' will be overwritten, do you want to continue? (y/n)");
                                             response = Console.ReadLine();
                                         }
+                                        if (response == "n") continue;
                                     }
-                                    Program.fat.moveFile(path, name, destinationPath + "/" + destinationName);
+                                    Program.fat.moveFile(path, fileName, destinationPath + "/" + destinationName);
                                     if (verbose) Console.WriteLine($"mv: File {fileName} moved");
                                 }
                                 else
@@ -329,8 +484,9 @@ namespace Terminal
                                             Console.WriteLine($"Directory '{destinationPath}/{destinationName}/{fileName}' will be overwritten, do you want to continue? (y/n)");
                                             response = Console.ReadLine();
                                         }
+                                        if (response == "n") continue;
                                     }
-                                    Program.fat.moveDirectory(path, name, destinationPath + "/" + destinationName);
+                                    Program.fat.moveDirectory(path, fileName, destinationPath + "/" + destinationName);
                                     if (verbose) Console.WriteLine($"mv: Directory {fileName} moved");
                                 }
                             }
@@ -338,7 +494,7 @@ namespace Terminal
                     }
                     else if (name.Contains(".") && Program.fat.fileExists(name, path))
                     {
-                        if (Program.fat.fileExists(name, destinationName + "/" + destinationPath) && !force)
+                        if (Program.fat.fileExists(name, destinationPath + "/" + destinationName) && !force)
                         {
                             string response = "";
                             while (response != "y" || response != "n")
@@ -352,7 +508,36 @@ namespace Terminal
                     }
                     else if (!name.Contains(".") && Program.fat.directoryExists(name + "/" + path))
                     {
-
+                        if (destinationName == "")
+                        {
+                            if (Program.fat.directoryExists(destinationPath + "/" + name) && !force)
+                            {
+                                string response = "";
+                                while (response != "y" || response != "n")
+                                {
+                                    Console.WriteLine($"Directory '{destinationPath}/{name}' will be overwritten, do you want to continue? (y/n)");
+                                    response = Console.ReadLine();
+                                }
+                                if (response == "n") continue;
+                            }
+                            Program.fat.moveDirectory(path, name, destinationPath);
+                            if (verbose) Console.WriteLine($"mv: File {name} moved");
+                        }
+                        else
+                        {
+                            if (Program.fat.directoryExists(destinationPath + "/" + destinationName) && !force)
+                            {
+                                string response = "";
+                                while (response != "y" || response != "n")
+                                {
+                                    Console.WriteLine($"Directory '{destinationPath}/{destinationName}' will be overwritten, do you want to continue? (y/n)");
+                                    response = Console.ReadLine();
+                                }
+                                if (response == "n") continue;
+                            }
+                            Program.fat.moveDirectory(path, name, destinationPath, destinationName);
+                            if (verbose) Console.WriteLine($"mv: File {name} moved");
+                        }
                     }
                     else
                     {
@@ -574,6 +759,12 @@ namespace Terminal
                     if (!int.TryParse(arg, out pid)) throw new Exception($"{arg} arguments must be pids");
                     pids.Add(pid);
                 }
+            }
+
+            if(pids.Contains(0))
+            {
+                Program.cM.exit = true;
+                return Dim().Text("Exiting...");
             }
 
             foreach (int pid in pids)

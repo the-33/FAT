@@ -320,6 +320,7 @@ namespace FAT
 
         public bool addFile(string name, string path)
         {
+            if (!name.Contains(".")) return false;
             string fileType = name.Split('.')[1];
             string fileName = name.Split('.')[0];
 
@@ -353,6 +354,7 @@ namespace FAT
 
         public bool removeFile(string name, string path)
         {
+            if (!name.Contains(".")) return false;
             string fileType = name.Split('.')[1];
             string fileName = name.Split('.')[0];
 
@@ -388,6 +390,7 @@ namespace FAT
 
         public bool moveFile(string path, string name, string newPath, string newName = "")
         {
+            if (!name.Contains(".")) return false;
             string fileType = name.Split('.')[1];
             string fileName = name.Split('.')[0];
 
@@ -421,6 +424,7 @@ namespace FAT
 
         public bool copyFile(string path, string name, string newPath, string newName = "")
         {
+            if (!name.Contains(".")) return false;
             string fileType = name.Split('.')[1];
             string fileName = name.Split('.')[0];
 
@@ -454,6 +458,7 @@ namespace FAT
 
         public bool writeToFile(string name, string path, string input, bool overwrite = true)
         {
+            if (!name.Contains(".")) return false;
             string fileType = name.Split('.')[1];
             string fileName = name.Split('.')[0];
 
@@ -530,6 +535,7 @@ namespace FAT
 
         public string catFile(string name, string path)
         {
+            if (!name.Contains(".")) return "";
             string fileType = name.Split('.')[1];
             string fileName = name.Split('.')[0];
             string content = "";
