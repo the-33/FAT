@@ -1,13 +1,35 @@
 ##mandatory
 #NAME#
-
+<rainbow><u>cmv</u></rainbow>
 #FORMAT#
-
+Usage:  <b>mv <color=YELLOW>[OPTION]</color></b>... <b><color=GREEN>[-T]</color></b> SOURCE DEST
+		<b>mv <color=YELLOW>[OPTION]</color></b>... <b><color=GREEN>SOURCE</color></b> ... <b><color=GREEN>DIRECTORY</color></b>...
+		<b>mv <color=YELLOW>[OPTION]</color></b>... <b><color=GREEN>-t DIRECTORY SOURCE</color></b> ...
 #DESCRIPTION#
-
+Moves or removes <color=GREEN><b>FILES OR DIRECTORIES</b></color>.
+##optional
 ##optional
 #EXPLANATION#
-
+If two files are given,<color=GREEN><b>'mv'</b></color> moves the first one to the second.
+If the last argument is a directory, <color=GREEN><b>'mv'</b></color> moves each other given file into the specified directory.
 #OPTIONS#
-
+   <color=YELLOW>-b,<tab>--backup=[METHOD]</color><tab>makes a backup of eahc file that would otherwise be overwritten or removed.
+   <color=YELLOW>--no-copy</color><tab>if a file cannot be renamod because the destination file system differs, fail with a diagnostic instead of copying and then removing the file.
+   <color=YELLOW>-u,<tab>--update</color><tab>Do not move a non-directory that has an existing destination with
+     the same or newer modification timestamp; instead, silently skip
+     the file without failing.  If the move is across file system
+     boundaries, the comparison is to the source timestamp truncated to
+     the resolutions of the destination file system and of the system
+     calls used to update timestamps; this avoids duplicate work if
+     several ‘mv -u’ commands are executed with the same source and
+     destination.  This option is ignored if the ‘-n’ or ‘--no-clobber’
+     option is also specified.   WHICH gives more control over which existing files in the
+     destination are replaced, and its value can be one of the
+     following:
+        <color=YELLOW>'all'</color><tab> replace all existing files.
+        <color=YELLOW>'none'</color><tab> no files are replaced.
+        <color=YELLOW>'older'</color><tab> replace the oldest file.       
+   <color=YELLOW>-t DIRECTORY,<tab>--target-directory=DIRECTORY</color><tab>specify the destination directory.
+   <color=YELLOW>-T,<tab>--show-tabs</color><tab>display <b>TAB</b> characters as <b>^I</b>
+   <tab><color=YELLOW>--help</color><tab>display this help
 #NOTES#
