@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 using FAT.Data;
 using FAT.MetaData;
 using Microsoft.VisualBasic.FileIO;
+using Spectre.Console;
+using Terminal;
 using static Crayon.Output;
 
 namespace FAT
@@ -103,8 +105,8 @@ namespace FAT
 
             public override string ToString()
             {
-                if (type == "") return "📁 " + name;
-                else return "📄 " + name + "." + type;
+                if (type == "") return name;
+                else return name + "." + type;
             }
         };
 
@@ -311,9 +313,8 @@ namespace FAT
             int directoryCluster = findDirectoryCluster(path);
             bool returnValue;
 
-            returnValue = (directoryCluster == -2);
+            returnValue = (directoryCluster != -2);
 
-            if (!returnValue) Console.Write(Bold().Red().Text("Could not find the directory \"" + path + "\"\n"));
             return returnValue;
         }
 
@@ -555,18 +556,18 @@ namespace FAT
 
         public bool fileExists(string name, string path)
         {
+            if (!name.Contains(".")) return false;
             string fileType = name.Split('.')[1];
             string fileName = name.Split('.')[0];
             bool returnValue = true;
 
             int directoryCluster = findDirectoryCluster(path);
 
-            if (directoryCluster == -2) { Console.Write(Bold().Red().Text("Could not find the file \"" + path + "/" + name + "\"\n")); return false; }
+            if (directoryCluster == -2) { return false; }
 
             if (directoryCluster == -1) returnValue = metadata.rootDirectory.entries.Exists(x => x.name == fileName && x.type == fileType);
             else returnValue = ((FAT.Data.Directory)data.clusters[directoryCluster]).entries.Exists(x => x.name == fileName && x.type == fileType);
 
-            if (!returnValue) Console.Write(Bold().Red().Text("Could not find the file \"" + path + "/" + name + "\"\n"));
             return returnValue;
         }
     }

@@ -24,9 +24,9 @@ namespace Terminal
         public string explanation { get; set; }
         public string options { get; set; }
         public string notes { get; set; }
-        private Func<string?[], Fat, string, string[]> execution { get; set; }
+        private Func<string[]?, string, string> execution { get; set; }
 
-        public Command(string pathToDSC, Func<string?[], Fat, string, string[]> execution)
+        public Command(string pathToDSC, Func<string[]?, string, string> execution)
         {
 
             name = "";
@@ -127,12 +127,12 @@ namespace Terminal
             }
         }
 
-        public string[] execute(string?[] args, Fat fat, string wD)
+        public string execute(string[]? args, string wD)
         {
-            if (args.Contains("--help")) { help(); return new string[] { "" }; }
+            if (args != null && args.Contains("--help")) { help(); return ""; }
             else
             {
-                return execution(args, fat, wD);
+                return execution(args, wD);
             }
         }
 

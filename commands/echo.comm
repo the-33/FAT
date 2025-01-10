@@ -2,7 +2,7 @@
 #NAME#
 <rainbow><u>echo</u></rainbow>
 #FORMAT#
-Usage: <b>echo ...
+Usage: <b>echo</b> ...
 #DESCRIPTION#
 Prints the text written in console.
 ##optional

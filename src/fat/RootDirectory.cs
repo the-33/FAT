@@ -25,14 +25,14 @@ namespace FAT.MetaData
 
         public override string ToString()
         {
-            string returnStr = "";
+            List<string> content = new();
 
             foreach (Fat.Entry e in entries)
             {
-                returnStr += e.ToString() + "\n";
+                content.Add(e.ToString());
             }
 
-            return returnStr;
+            return String.Join("   ", content);
         }
     }
 }

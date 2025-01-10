@@ -1,44 +1,11 @@
 {
   "clusterSize": 64,
   "metadata": {
-    "bootCode": {},
-    "fatCopyPath": "",
+    "bootCode": {
+      "magicNumber": "9661C0BE1A9F136C5E8C7F3851B8B550"
+    },
+    "fatCopyPath": "C:\\USJ\\Segundo\\Sistemas Operativos\\FAT\\tests\\test.fatcpy",
     "clusters": [
-      {
-        "available": false,
-        "damaged": false,
-        "reserved": false,
-        "next": -1,
-        "end": true
-      },
-      {
-        "available": false,
-        "damaged": false,
-        "reserved": false,
-        "next": -1,
-        "end": true
-      },
-      {
-        "available": false,
-        "damaged": false,
-        "reserved": false,
-        "next": -1,
-        "end": true
-      },
-      {
-        "available": false,
-        "damaged": false,
-        "reserved": false,
-        "next": -1,
-        "end": true
-      },
-      {
-        "available": false,
-        "damaged": false,
-        "reserved": false,
-        "next": 5,
-        "end": false
-      },
       {
         "available": false,
         "damaged": false,
@@ -50,8 +17,8 @@
     "rootDirectory": {
       "entries": [
         {
-          "name": "peliculas",
-          "type": "",
+          "name": "hola",
+          "type": "sh",
           "startingCluster": 0
         }
       ]
@@ -60,50 +27,8 @@
   "data": {
     "clusters": [
       {
-        "$type": 1,
-        "entries": [
-          {
-            "name": "peliculas de animacion",
-            "type": "",
-            "startingCluster": 2
-          },
-          {
-            "name": "el padrino",
-            "type": "mp4",
-            "startingCluster": 1
-          },
-          {
-            "name": "peliculas_buenas",
-            "type": "",
-            "startingCluster": 3
-          }
-        ]
-      },
-      {
         "$type": 0,
-        "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
-      },
-      {
-        "$type": 1,
-        "entries": []
-      },
-      {
-        "$type": 1,
-        "entries": [
-          {
-            "name": "los_padrinos",
-            "type": "sh",
-            "startingCluster": 4
-          }
-        ]
-      },
-      {
-        "$type": 0,
-        "data": "aG9sYWhvbGFmc2ZzZnNmc2RmanNranNrc2tka2RrZHV1ZmZkbmY4ODU3NTg1OTU5NTlzamRoZGdzZGZzYWxkaw=="
-      },
-      {
-        "$type": 0,
-        "data": "ZnNkZmVpZjg0OTQzZjh1ZnNocmdranNkZmdoaWZnaWRmZ2ppZGZqZw=="
+        "data": "CkZ1bmN0aW9uIG1haW4Kc2xlZXAgNQpFbmRGdW5jdGlvbg=="
       }
     ]
   }

@@ -8,8 +8,12 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Text;
+using Microsoft.Win32;
+using System.Collections.Generic;
+using System.Net;
+using Newtonsoft.Json.Linq;
 
-class Program
+public static class Program
 {
     #region CONSTANTS
 
@@ -21,7 +25,7 @@ class Program
     private const string CONF_PATH = "../../../conf/"; // Ubicacion de la carpeta de configuraciones
 
     // General
-    #pragma warning disable CS0162
+#pragma warning disable CS0162
     private static bool TEST_FAT = false; // Para testear la FAT
     // FAT
     private static int CLUSTER_SIZE = 1024;
@@ -101,9 +105,13 @@ class Program
         public short X;
         public short Y;
     }
+
+    // Previous font to restore
+    static string? previousFont = null;
     #endregion
 
     public static Fat fat { get; set; } = new(CLUSTER_SIZE);
+    public static ConsoleManager cM = new(COMMAND_DESCRIPTION_PATH, COMMAND_DESCRIPTION_EXTENSION); // Clase para gestionar los comandos
 
     [STAThread]
     public static void Main(string[] args)
@@ -115,6 +123,7 @@ class Program
 
         #region SETUP
         // No tocar esta region, importante para que la aplicacion funcione bien
+
         Console.OutputEncoding = System.Text.Encoding.UTF8; // Cambia el encoding de texto para admitir mas caracteres, permite que se dibujen los emojis
 
         // Iniciar la aplicacion en pantalla completa
@@ -143,6 +152,7 @@ class Program
 
         loadConfiguration();
         fat = new(CLUSTER_SIZE); // Memoria FAT
+        cM = new(COMMAND_DESCRIPTION_PATH, COMMAND_DESCRIPTION_EXTENSION);
         #endregion
 
         if (TEST_FAT) { fatTest(); }
@@ -152,29 +162,31 @@ class Program
     #region MAIN_METHODS
     static void fatTest()
     {
-        //testFat = loadFat("../../../tests/", "test");
-        //Console.WriteLine(testFat.catFile("los padrinos.mp5", "C://peliculas/peliculas buenas/"));
-        //Console.WriteLine(testFat.catFile("el padrino.mp4", "C://peliculas/"));
-
-        //testFat.addDirectory("peliculas", "C://");
-        //testFat.addFile("shrek.mp4", "C://peliculas/");
-        //testFat.moveFile("C://peliculas/", "shrek.mp4", "C://");
-        //testFat.addDirectory("peliculas de animacion", "C://peliculas/");
-        //testFat.removeFile("shrek.mp4", "C://");
-        //testFat.addFile("el padrino.mp4", "C://peliculas/peliculas de animacion/");
-        //testFat.moveFile("C://peliculas/peliculas de animacion/", "el padrino.mp4", "C://peliculas");
-        //testFat.addDirectory("peliculas_buenas", "C://");
-        //testFat.moveDirectory("C://", "peliculas_buenas", "C://peliculas/");
-        //testFat.copyFile("C://peliculas/", "el padrino.mp4", "C://peliculas/peliculas_buenas/", "los_padrinos.sh");
-        //testFat.writeToFile("los_padrinos.sh", "C://peliculas/peliculas_buenas/", "holaholafsfsfsfsdfjskjskskdkdkduuffdnf885758595959sjdhdgsdfsaldkfsdfeif84943f8ufshrgkjsdfghifgidfgjidfjg");
-
-        //saveFat(testFat, "../../../tests/", "test");
-        return;
+        fat.showMetadata();
+        fat.addDirectory("peliculasNoVistas", "C:/");
+        fat.addFile("exmachina.mp4", "C:/peliculasNoVistas");
+        fat.showMetadata();
+        fat.addDirectory("peliculasVistas", "C:/");
+        fat.moveFile("C:/peliculasNoVistas", "exmachina.mp4", "C:/peliculasvistas");
+        fat.showMetadata();
+        fat.removeDirectory("C:/", "peliculasVistas");
+        fat.showMetadata();
+        //listar procesos en ejecucion
+        fat.addDirectory("tmp", "C:/");
+        fat.addFile("gattaca.mp4", "C:/tmp");
+        fat.addFile("memento.mp4", "C:/tmp");
+        //esperar un minuto
+        Console.WriteLine(fat.listDirectory("C:/tmp"));
+        //lanzar proceso borratmpcada5s
+        //listar procesos
+        //esperar 5 segundos
+        Console.WriteLine(fat.listDirectory("C:/tmp"));
     }
 
     static void mainMenu(int selected = 0)
     {
-        Console.CancelKeyPress += delegate (object? sender, ConsoleCancelEventArgs e) {
+        Console.CancelKeyPress += delegate (object? sender, ConsoleCancelEventArgs e)
+        {
             e.Cancel = true;
         };
 
@@ -199,7 +211,7 @@ class Program
 
         do
         {
-            if(enableMouseInteraction)
+            if (enableMouseInteraction)
             {
                 Console.SetCursorPosition(Console.WindowLeft, Console.WindowTop);
                 GetCursorPos(out POINT point);
@@ -209,9 +221,9 @@ class Program
 
             if (System.Console.KeyAvailable) keyPress = System.Console.ReadKey(true).Key;
 
-            if(keyPress == ConsoleKey.DownArrow)
+            if (keyPress == ConsoleKey.DownArrow)
             {
-                if (selected+1 < MENU_OPTIONS.Length)
+                if (selected + 1 < MENU_OPTIONS.Length)
                 {
                     selected++;
                 }
@@ -231,7 +243,7 @@ class Program
         }
         while (!exit);
 
-        switch(selected)
+        switch (selected)
         {
             case 0: consoleEnvironment(); break;
             case 1: showFatMetadata(); break;
@@ -244,7 +256,8 @@ class Program
 
     static void consoleEnvironment()
     {
-        Console.CancelKeyPress += delegate (object? sender, ConsoleCancelEventArgs e) {
+        Console.CancelKeyPress += delegate (object? sender, ConsoleCancelEventArgs e)
+        {
             e.Cancel = true;
         };
 
@@ -252,43 +265,25 @@ class Program
         Console.CursorVisible = true;
 
         // CONSOLE ENVIRONMENT
+        cM.exit = false;
         string? command; // String para guardar el comando que el usuario escriba
-        ConsoleManager cM = new(COMMAND_DESCRIPTION_PATH, COMMAND_DESCRIPTION_EXTENSION); // Clase para gestionar los comandos
-
-        string? workingDirectory = "C:/", userName, computerName;
         bool exit = false;
-
-        using (System.Diagnostics.Process process = new System.Diagnostics.Process()) // Obtiene el nombre de usuario y el nombre del equipo
-        {
-            process.StartInfo.FileName = "cmd.exe";
-            process.StartInfo.Arguments = @"/c whoami";
-            process.StartInfo.UseShellExecute = false;
-            process.StartInfo.RedirectStandardOutput = true;
-            process.Start();
-
-            StreamReader reader = process.StandardOutput;
-            string output = reader.ReadToEnd();
-
-            computerName = output.Split('\\')[0];
-            userName = output.Split('\\')[1].Substring(0, output.Split('\\')[1].Length - 2);
-        }
-
-        System.Threading.Tasks.Task.Run(() =>
-        {
-            while (!exit) { exit = cM.exit; }
-        });
 
         while (!exit) // Bucle principal
         {
             //TODO: agregar colores
-            Console.WriteLine(Red().Text("┌─[") + Green().Text(userName) + Yellow().Text("@") + Rgb(43, 91, 156).Text(computerName) + Red().Text("]─[") + Rgb(52, 117, 27).Text(workingDirectory) + Red().Text("]"));
+            Console.WriteLine(Red().Text("┌─[") + Green().Text(cM.envVars["USER"]) + Yellow().Text("@") + Rgb(43, 91, 156).Text(cM.envVars["HOSTNAME"]) + Red().Text("]─[") + Rgb(52, 117, 27).Text(cM.envVars["PWD"]) + Red().Text("]"));
             Console.Write(Red().Text("└───■") + Yellow().Text(" $ "));
 
-            if(!exit)
+            if (!exit)
             {
                 command = Console.ReadLine();
-                if (!exit && command != null && command != "") cM.execute(command, fat, workingDirectory);
+                if (!exit && command != null && command != "") cM.execute(command, cM.envVars["PWD"]);
+                while (System.Console.KeyAvailable) System.Console.ReadKey(true);
+
                 Console.WriteLine();
+
+                exit = cM.exit;
             }
         }
 
@@ -329,7 +324,7 @@ class Program
     {
         string path = askForFile();
 
-        if(path != "")
+        if (path != "")
         {
             if (File.Exists(path))
             {
@@ -357,7 +352,7 @@ class Program
 
             System.IO.File.WriteAllText(path, jsonString);
 
-            if(File.Exists(path + "cpy"))
+            if (File.Exists(path + "cpy"))
             {
                 File.SetAttributes(
                    path + "cpy",
@@ -499,7 +494,7 @@ class Program
                 }
             }
         }
-        
+
         mainMenu(4);
     }
 
@@ -526,7 +521,7 @@ class Program
     #region AUXILIARY METHODS
     static void PrintMenu(string[] options, int selected, string message, int hOffset, int vOffset, string bottomMessage)
     {
-        if(selected < 0 || selected >= options.Length)
+        if (selected < 0 || selected >= options.Length)
         {
             selected = 0;
         }
@@ -534,21 +529,21 @@ class Program
         int height = 5 + options.Length;
         int width = options.Max(x => x.Length);
         width += 8;
-        if(width < message.Length) width = message.Length+10;
+        if (width < message.Length) width = message.Length + 10;
 
         int leftStartingPoint = ((Console.WindowWidth - width) / 2) + hOffset;
         Console.SetCursorPosition(leftStartingPoint, ((Console.WindowHeight - height) / 2) + vOffset);
 
-        for (int i = -1; i<height; i++)
+        for (int i = -1; i < height; i++)
         {
             string line = "";
-            for (int j = 0; j<width; j++)
+            for (int j = 0; j < width; j++)
             {
                 if (i == -1)
                 {
                     if (j == 2) line += "┌";
-                    else if ( j == message.Length + 3) line += "┐";
-                    else if(j > 2 && j<message.Length + 3) line += '─';
+                    else if (j == message.Length + 3) line += "┐";
+                    else if (j > 2 && j < message.Length + 3) line += '─';
                     else line += ' ';
                 }
                 else if (i == 0)
@@ -558,7 +553,7 @@ class Program
                     else if (j == width - 1) line += '╗';
                     else line += '═';
                 }
-                else if(i == 1)
+                else if (i == 1)
                 {
                     if (j == 0 || j == width - 1) line += '║';
                     else if (j == 2) line += "└";
@@ -566,7 +561,7 @@ class Program
                     else if (j > 2 && j < message.Length + 3) line += '─';
                     else line += ' ';
                 }
-                else if (i == height-1)
+                else if (i == height - 1)
                 {
                     if (j == 0) line += '╚';
                     else if (j == width - 1) line += '╝';
@@ -579,14 +574,14 @@ class Program
                 }
             }
             Console.Write(line);
-            Console.SetCursorPosition(leftStartingPoint, Console.CursorTop+1);
+            Console.SetCursorPosition(leftStartingPoint, Console.CursorTop + 1);
         }
 
         Console.SetCursorPosition(Console.CursorLeft, ((Console.WindowHeight - height) / 2) + vOffset + 3);
 
-        for (int i = 0; i<options.Length; i++)
+        for (int i = 0; i < options.Length; i++)
         {
-            Console.SetCursorPosition(((Console.WindowWidth - (width-6)) / 2) + hOffset, Console.CursorTop + 1);
+            Console.SetCursorPosition(((Console.WindowWidth - (width - 6)) / 2) + hOffset, Console.CursorTop + 1);
             if (i != selected) Console.Write("  " + options[i]);
             else
             {
@@ -605,7 +600,7 @@ class Program
                         if (color.StartsWith("RGB("))
                         {
                             color = color.Replace("RGB(", "").Replace(")", "");
-                            string[] rgbStrings = color.Split( ',', ' ', StringSplitOptions.RemoveEmptyEntries);
+                            string[] rgbStrings = color.Split(',', ' ', StringSplitOptions.RemoveEmptyEntries);
                             int[] rgb = new int[] { int.Parse(rgbStrings[0]), int.Parse(rgbStrings[1]), int.Parse(rgbStrings[2]) };
                             Console.Write(Rgb((byte)rgb[0], (byte)rgb[1], (byte)rgb[2]).Bold().Text("> ") + Reversed().Text(options[i]));
                         }
@@ -614,7 +609,7 @@ class Program
             }
         }
 
-        Console.SetCursorPosition(((Console.WindowWidth - bottomMessage.Length)/2) + hOffset, Console.CursorTop + 4);
+        Console.SetCursorPosition(((Console.WindowWidth - bottomMessage.Length) / 2) + hOffset, Console.CursorTop + 4);
         Console.Write(Dim().Text(bottomMessage));
     }
 
@@ -628,7 +623,7 @@ class Program
             {
                 string[] configuration = line.Split(" : ");
 
-                switch(configuration[0])
+                switch (configuration[0])
                 {
                     case "TEST_FAT":
                         TEST_FAT = (configuration[1] == "true");
@@ -695,7 +690,7 @@ class Program
         {
             string? line;
             List<string> title = new();
-            if(MENU_TITLE_FORMAT == "rainbow")
+            if (MENU_TITLE_FORMAT == "rainbow")
             {
                 int displacement = 0;
                 while ((line = sr.ReadLine()) != null)
@@ -711,7 +706,7 @@ class Program
                     title.Add("<" + MENU_TITLE_FORMAT + ">" + line + "</" + MENU_TITLE_FORMAT + ">");
                 }
             }
-            
+
             TITLE = title.ToArray();
             sr.Close();
         }
@@ -732,7 +727,7 @@ class Program
 
     private static string askForFile(bool fileShouldExist = false)
     {
-        OpenFileDialog openFileDialog = new OpenFileDialog
+        System.Windows.Forms.OpenFileDialog openFileDialog = new System.Windows.Forms.OpenFileDialog
         {
             Filter = "FAT files (*.fat)|*.fat",
             Title = "Select a FAT File",

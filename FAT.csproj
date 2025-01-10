@@ -11,10 +11,13 @@
 
   <ItemGroup>
     <Folder Include="bin\Debug\net6.0\" />
+    <Folder Include="conf\fonts\" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="PresentationFramework" Version="4.6.0" />
+    <PackageReference Include="Spectre.Console" Version="0.49.1" />
     <PackageReference Include="System.Management" Version="9.0.0" />
   </ItemGroup>
 </Project>

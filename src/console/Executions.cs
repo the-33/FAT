@@ -26,16 +26,17 @@ namespace Terminal
 
     public class Executions
     {
-        public static string getRealPath(string path, string wD)
+        private static (string name, string path) getRealPath(string path, string wD)
         {
             string realPath = "";
+
             Stack<string> realPathStack = new Stack<string>();
 
-            if (path.StartsWith(".") || path.StartsWith(".."))
+            if (path.StartsWith("./") || path.StartsWith("../"))
             {
-                foreach (string s in wD.Split("/")) realPathStack.Push(s);
+                foreach (string s in wD.Split("/", StringSplitOptions.RemoveEmptyEntries)) realPathStack.Push(s);
 
-                foreach (string s in path.Split("/"))
+                foreach (string s in path.Split("/", StringSplitOptions.RemoveEmptyEntries))
                 {
                     switch (s)
                     {
@@ -45,38 +46,91 @@ namespace Terminal
                     }
                 }
 
-                realPath = string.Join('/', realPathStack.ToArray());
+                realPath = wD + string.Join('/', realPathStack.ToArray().Reverse());
             }
             else if (realPath.StartsWith("C:/")) realPath = path;
             else realPath = wD + "/" + path;
 
-            return realPath;
+            string returnName = "";
+            string returnPath;
+
+            if (!realPath.EndsWith("/"))
+            {
+                returnName = realPath.Split("/").Last();
+                returnPath = realPath.Remove(realPath.Length - (returnName.Length + 1));
+            }
+            else returnPath = realPath;
+
+            return (returnName, returnPath);
         }
 
-        public Func<string?[], Fat, string, string[]> cdExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> cdExecution = (args, wD) =>
         {
-            return new string[] { "" };
+            return "";
         };
 
-        public Func<string?[], Fat, string, string[]> lsExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> lsExecution = (args, wD) =>
         {
-            return new string[] { "" };
+            return "";
         };
 
-        public Func<string?[], Fat, string, string[]> pwdExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> pwdExecution = (args, wD) =>
         {
-            return new string[] { "" };
+            return wD;
         };
 
-        public Func<string?[], Fat, string, string[]> mkdirExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> mkdirExecution = (args, wD) =>
         {
-            //string regexPattern = @"^[a-zA-Z0-9_-]+$";
-            //if (!Regex.IsMatch(name, regexPattern)) Console.WriteLine(Bold().Red().Text("Names can only contain alpanumeric characters and '-' or '_'."));
+            if (args == null) throw new Exception("No directories to create specified");
 
-            return new string[] { "" };
+            bool verbose = false;
+            bool parents = false;
+
+            List<string> directories = new List<string>();
+
+            foreach(string arg in args)
+            {
+                switch(arg)
+                {
+                    case "-v":
+                    case "--verbose":
+                        verbose = true;
+                        break;
+                    case "-p":
+                    case "--parents":
+                        parents = true;
+                        break;
+                    default:
+                        directories.Add(arg);
+                        break;
+                }
+            }
+
+            foreach(string d in directories)
+            {
+                if (parents)
+                {
+                    //Hacer que cree padres
+                }
+                else
+                {
+                    string name, path;
+                    (name, path) = getRealPath(d, wD);
+                    if(Program.fat.directoryExists(path))
+                    {
+                        string regexPattern = @"^[a-zA-Z0-9_-]+$";
+                        if (!Regex.IsMatch(name, regexPattern)) throw new Exception("Directory names can only contain alpanumeric characters and '-' or '_'");
+                        Program.fat.addDirectory(name, path);
+                        if (verbose) Console.WriteLine($"mkdir: Directory '{name}' created");
+                    }
+                    else throw new Exception($"cannot create directory '{d}': No such file or directory");
+                }
+            }
+
+            return "";
         };
 
-        public Func<string?[], Fat, string, string[]> rmdirExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> rmdirExecution = (args, wD) =>
         {
             //if (name.Contains('*'))
             //{
@@ -98,91 +152,240 @@ namespace Terminal
             //    }
             //}
 
-            return new string[] { "" };
+            return "";
         };
 
-        public Func<string?[], Fat, string, string[]> rmExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> rmExecution = (args, wD) =>
         {
-            return new string[] { "" };
+            return "";
         };
 
-        public Func<string?[], Fat, string, string[]> cpExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> cpExecution = (args, wD) =>
         {
-            return new string[] { "" };
+            return "";
         };
 
-        public Func<string?[], Fat, string, string[]> mvExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> mvExecution = (args, wD) =>
         {
-            //if (name.Contains('*'))
-            //{
-            //    if (newName != "") Console.WriteLine(Bold().Red().Text("You can't move more than one directory to another and assign them the same name."));
+            if (args == null) throw new Exception("No files or directories to move specified");
 
-            //    string regexPattern = "^" + Regex.Escape(name).Replace("\\*", ".*") + "$";
+            bool force = false;
+            bool verbose = false;
 
-            //    if (directoryCluster == -1)
-            //    {
-            //        foreach (Entry e in metadata.RootDirectory.Entries)
-            //        {
-            //            if (Regex.IsMatch(e.Name, regexPattern) && e.Type == "") moveDirectory(path, e.Name, newPath);
-            //        }
-            //    }
-            //    else
-            //    {
-            //        foreach (Entry e in ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries)
-            //        {
-            //            if (Regex.IsMatch(e.Name, regexPattern) && e.Type == "") moveDirectory(path, e.Name, newPath);
-            //        }
-            //    }
+            int mode = 0;
 
-            //    return true;
-            //}
+            List<string> sources = new List<string>();
+            string destination = "";
 
-            //if (name.Contains('*'))
-            //{
-            //    if (newName != "") Console.WriteLine(Bold().Red().Text("You can't move more than one file to the same directory and assign them the same name"));
+            foreach (string arg in args)
+            {
+                switch (arg)
+                {
+                    case "-f":
+                    case "--force":
+                        force = true;
+                        break;
+                    case "-v":
+                    case "--verbose":
+                        verbose = true;
+                        break;
+                    default:
+                        if (arg == args.Last()) destination = arg;
+                        else sources.Add(arg);
+                        break;
+                }
+            }
 
-            //    string regexPattern = "^" + Regex.Escape(name).Replace("\\*", ".*") + "$";
+            if (destination == "") throw new Exception("No destination specified");
+            if (sources.Count == 0) throw new Exception("No source(s) specified");
 
-            //    if (directoryCluster == -1)
-            //    {
-            //        foreach (Entry e in metadata.RootDirectory.Entries)
-            //        {
-            //            if (Regex.IsMatch(e.Name + "." + e.Type, regexPattern)) moveFile(path, e.Name, newPath);
-            //        }
-            //    }
-            //    else
-            //    {
-            //        foreach (Entry e in ((FAT.Data.Directory)data.Clusters[directoryCluster]).Entries)
-            //        {
-            //            if (Regex.IsMatch(e.Name + "." + e.Type, regexPattern)) moveFile(path, e.Name, newPath);
-            //        }
-            //    }
-            //}
+            string destinationName, destinationPath;
 
-            return new string[] { "" };
+            if (!destination.Contains("."))
+            {
+                mode = 2;
+                string name, path;
+                (name, path) = getRealPath(destination, wD);
+
+                if(name == "")
+                {
+                    if (!Program.fat.directoryExists(path)) throw new Exception($"Cannot move files to '{destination}': no such file or directory");
+                }
+                else
+                {
+                    if (!Program.fat.directoryExists(path + "/" + name)) throw new Exception($"Cannot move files to '{destination}': no such file or directory");
+                }
+
+                destinationName = name;
+                destinationPath = path;
+            }
+            else
+            {
+                mode = 1;
+                string name, path;
+                (name, path) = getRealPath(destination, wD);
+                if (!Program.fat.directoryExists(path)) throw new Exception($"Cannot move file to '{destination}': no such file or directory");
+
+                destinationName = name;
+                destinationPath = path;
+            }
+
+            if (mode == 1)
+            {
+                foreach(string source in sources)
+                {
+                    string name, path;
+                    (name, path) = getRealPath(source, wD);
+
+                    if (name == "")
+                    {
+                        if (Program.fat.directoryExists(path)) name = "*";
+                        else Console.WriteLine($"cat: {path}: No such directory");
+                    }
+
+                    if (name.Contains("*"))
+                    {
+                        string regexPattern = "^" + Regex.Escape(name).Replace("\\*", ".*") + "$";
+                        foreach (string fileName in Program.fat.listDirectory(path).Split("   ", StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            if (Regex.IsMatch(fileName, regexPattern))
+                            {
+                                if (Program.fat.fileExists(destinationName, destinationPath) && !force)
+                                {
+                                    string response = "";
+                                    while (response != "y" || response != "n")
+                                    {
+                                        Console.WriteLine($"File '{destinationPath}/{destinationName}' will be overwritten, do you want to continue? (y/n)");
+                                        response = Console.ReadLine();
+                                    }
+                                }
+                                Program.fat.moveFile(path, name, destinationPath, destinationName);
+                                if (verbose) Console.WriteLine($"mv: File {fileName} moved");
+                            }
+                        }
+                    }
+                    else if (name.Contains(".") && Program.fat.fileExists(name, path))
+                    {
+                        if (Program.fat.fileExists(destinationName, destinationPath) && !force)
+                        {
+                            string response = "";
+                            while (response != "y" || response != "n")
+                            {
+                                Console.WriteLine($"File '{destinationPath}/{destinationName}' will be overwritten, do you want to continue? (y/n)");
+                                response = Console.ReadLine();
+                            }
+                        }
+                        Program.fat.moveFile(path, name, destinationPath, destinationName);
+                        if (verbose) Console.WriteLine($"mv: File {name} moved");
+                    }
+                    else
+                    {
+                        if (Program.fat.directoryExists(path + name)) Console.WriteLine($"cat: {source}: Is a directory");
+                        else Console.WriteLine($"cat: {source}: No such file or directory");
+                    }
+                }
+            }
+            else if (mode == 2)
+            {
+                foreach (string source in sources)
+                {
+                    string name, path;
+                    (name, path) = getRealPath(source, wD);
+
+                    if (name == "")
+                    {
+                        if (Program.fat.directoryExists(path)) name = "*";
+                        else Console.WriteLine($"cat: {path}: No such directory");
+                    }
+
+                    if (name.Contains("*"))
+                    {
+                        string regexPattern = "^" + Regex.Escape(name).Replace("\\*", ".*") + "$";
+                        foreach (string fileName in Program.fat.listDirectory(path).Split("   ", StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            if (Regex.IsMatch(fileName, regexPattern))
+                            {
+                                if (fileName.Contains("."))
+                                {
+                                    if (Program.fat.fileExists(fileName, destinationName + "/" + destinationPath) && !force)
+                                    {
+                                        string response = "";
+                                        while (response != "y" || response != "n")
+                                        {
+                                            Console.WriteLine($"File '{destinationPath}/{destinationName}/{fileName}' will be overwritten, do you want to continue? (y/n)");
+                                            response = Console.ReadLine();
+                                        }
+                                    }
+                                    Program.fat.moveFile(path, name, destinationPath + "/" + destinationName);
+                                    if (verbose) Console.WriteLine($"mv: File {fileName} moved");
+                                }
+                                else
+                                {
+                                    if (Program.fat.directoryExists(destinationPath + "/" + destinationName + "/" + fileName) && !force)
+                                    {
+                                        string response = "";
+                                        while (response != "y" || response != "n")
+                                        {
+                                            Console.WriteLine($"Directory '{destinationPath}/{destinationName}/{fileName}' will be overwritten, do you want to continue? (y/n)");
+                                            response = Console.ReadLine();
+                                        }
+                                    }
+                                    Program.fat.moveDirectory(path, name, destinationPath + "/" + destinationName);
+                                    if (verbose) Console.WriteLine($"mv: Directory {fileName} moved");
+                                }
+                            }
+                        }
+                    }
+                    else if (name.Contains(".") && Program.fat.fileExists(name, path))
+                    {
+                        if (Program.fat.fileExists(name, destinationName + "/" + destinationPath) && !force)
+                        {
+                            string response = "";
+                            while (response != "y" || response != "n")
+                            {
+                                Console.WriteLine($"File '{destinationPath}/{destinationName}/{name}' will be overwritten, do you want to continue? (y/n)");
+                                response = Console.ReadLine();
+                            }
+                        }
+                        Program.fat.moveFile(path, name, destinationPath + "/" + destinationName);
+                        if (verbose) Console.WriteLine($"mv: File {name} moved");
+                    }
+                    else if (!name.Contains(".") && Program.fat.directoryExists(name + "/" + path))
+                    {
+
+                    }
+                    else
+                    {
+                        Console.WriteLine($"cat: {source}: No such file or directory");
+                    }
+                }
+            }
+
+            return "";
         };
 
-        public Func<string?[], Fat, string, string[]> touchExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> touchExecution = (args, wD) =>
         {
-            return new string[] { "" };
+
+            return "";
         };
 
-        public Func<string?[], Fat, string, string[]> fileExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> fileExecution = (args, wD) =>
         {
-            return new string[] { "" };
+            return "";
         };
 
-        public Func<string?[], Fat, string, string[]> findExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> findExecution = (args, wD) =>
         {
-            return new string[] { "" };
+            return "";
         };
 
-        public Func<string?[], Fat, string, string[]> locateExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> locateExecution = (args, wD) =>
         {
-            return new string[] { "" };
+            return "";
         };
 
-        public Func<string?[], Fat, string, string[]> catExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> catExecution = (args, wD) =>
         {
             bool showEnds = false;
             bool showTabs = false;
@@ -190,127 +393,209 @@ namespace Terminal
             bool number = false;
             bool numberNonBlank = false;
 
-            List<string[]> files = new List<string[]>();
+            List<string> files = new List<string>();
 
-            foreach(string arg in args)
+            if(args != null)
             {
-                switch(arg)
+                foreach (string arg in args)
                 {
-                    case "-A":
-                    case "--show-all":
-                        showEnds = true;
-                        showTabs = true;
-                        break;
-                    case "-E":
-                    case "--show-ends":
-                        showEnds = true;
-                        break;
-                    case "-n":
-                    case "--number":
-                        number = true;
-                        break;
-                    case "-s":
-                    case "--squeeze-blank":
-                        squeezeBlank = true;
-                        break;
-                    case "-T":
-                    case "--show-tabs":
-                        showTabs = true;
-                        break;
-                    case "-b":
-                    case "--number-nonblank":
-                        numberNonBlank = true;
-                        break;
-                    default:
-                        if (arg.StartsWith("-") || arg.StartsWith("--")) throw new Exception($"Invalid option '{arg}'");
-                        string name = arg.Split('/').Last();
-                        string path = getRealPath(arg.Replace(name, ""), wD);
-                        if (fat.fileExists(name, path)) files.Add(new string[] { name, path });
-                        else
-                        {
-                            if(!fat.directoryExists(arg)) throw new Exception($"{arg}: Is a directory");
-                            else throw new Exception($"{arg}: No such file or directory");
-                        }
-                        break;
+                    switch (arg)
+                    {
+                        case "-A":
+                        case "--show-all":
+                            showEnds = true;
+                            showTabs = true;
+                            break;
+                        case "-E":
+                        case "--show-ends":
+                            showEnds = true;
+                            break;
+                        case "-n":
+                        case "--number":
+                            number = true;
+                            break;
+                        case "-s":
+                        case "--squeeze-blank":
+                            squeezeBlank = true;
+                            break;
+                        case "-T":
+                        case "--show-tabs":
+                            showTabs = true;
+                            break;
+                        case "-b":
+                        case "--number-nonblank":
+                            numberNonBlank = true;
+                            break;
+                        default:
+                            if (arg.StartsWith("-") || arg.StartsWith("--")) throw new Exception($"Invalid option '{arg}'");
+                            files.Add(arg);
+                            break;
+                    }
                 }
             }
 
+            List<string> inputList = new();
             string input = "";
             string output = "";
 
-            foreach (string[] file in files)
+            if (files.Count > 0)
             {
-                input += fat.catFile(file[0], file[1]) + "\n";
-            }
-
-            if (showEnds) input = input.Replace("\n", "$\n");
-            if (showTabs) input = input.Replace("\t", "^I");
-            if (squeezeBlank) input = string.Join("\n", input.Split("\n", StringSplitOptions.RemoveEmptyEntries));
-
-            if (numberNonBlank)
-            {
-                string[] lines = input.Split("\n");
-
-                if (lines.Length == 0) output = "\t1  " + input;
-                else
+                foreach (string file in files)
                 {
-                    int i = 1;
-                    List<string> outputList = new();
-                    foreach (string line in lines)
+                    string name, path;
+                    (name, path) = getRealPath(file, wD);
+
+                    if (name == "")
                     {
-                        if (line != "" && (showEnds && line != "$")) { outputList.Add($"\t{i}  {line}"); i++; }
-                        else outputList.Add(line);
+                        if (Program.fat.directoryExists(path)) name = "*";
+                        else inputList.Add($"cat: {path}: No such directory");
                     }
-                    output = string.Join ("\n", outputList);
-                }
-            }
-            else if (number)
-            {
-                string[] lines = input.Split("\n");
 
-                if (lines.Length == 0) output = "\t1  " + input;
-                else
+                    if (name.Contains("*"))
+                    {
+                        string regexPattern = "^" + Regex.Escape(name).Replace("\\*", ".*") + "$";
+                        foreach (string fileName in Program.fat.listDirectory(path).Split("   ", StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            if (Regex.IsMatch(fileName, regexPattern))
+                            {
+                                inputList.Add(Program.fat.catFile(fileName, path));
+                            }
+                        }
+                    }
+                    else if (name.Contains(".") && Program.fat.fileExists(name, path)) inputList.Add(Program.fat.catFile(name, path));
+                    else
+                    {
+                        if (Program.fat.directoryExists(path + name)) inputList.Add($"cat: {file}: Is a directory");
+                        else inputList.Add($"cat: {file}: No such file or directory");
+                    }
+                }
+
+                input = string.Join("\n", inputList);
+
+                if (showEnds) input = input.Replace("\n", "$\n");
+                if (showTabs) input = input.Replace("\t", "^I");
+                if (squeezeBlank) input = string.Join("\n", input.Split("\n", StringSplitOptions.RemoveEmptyEntries));
+
+                if (numberNonBlank)
                 {
-                    List<string> outputList = new();
-                    for (int i = 0; i < lines.Length; i++) outputList.Add($"\t{i + 1}  {lines[i]}");
-                    output = string.Join("\n", outputList);
+                    string[] lines = input.Split("\n");
+
+                    if (lines.Length == 0) output = "\t1  " + input;
+                    else
+                    {
+                        int i = 1;
+                        List<string> outputList = new();
+                        foreach (string line in lines)
+                        {
+                            if (line != "" && (showEnds && line != "$")) { outputList.Add($"\t{i}  {line}"); i++; }
+                            else outputList.Add(line);
+                        }
+                        output = string.Join("\n", outputList);
+                    }
                 }
+                else if (number)
+                {
+                    string[] lines = input.Split("\n");
+
+                    if (lines.Length == 0) output = "\t1  " + input;
+                    else
+                    {
+                        List<string> outputList = new();
+                        for (int i = 0; i < lines.Length; i++) outputList.Add($"\t{i + 1}  {lines[i]}");
+                        output = string.Join("\n", outputList);
+                    }
+                }
+                else output = (input);
             }
-            else output = (input);
+            else throw new Exception("No file(s) specified");
 
-            return new string[] { output };
+            return output;
         };
 
-        public Func<string?[], Fat, string, string[]> grepExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> grepExecution = (args, wD) =>
         {
-            return new string[] { "" };
+            return "";
         };
 
-        public Func<string?[], Fat, string, string[]> nanoExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> nanoExecution = (args, wD) =>
         {
-            return new string[] { "" };
+            return "";
         };
 
-        public Func<string?[], Fat, string, string[]> helpExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> helpExecution = (args, wD) =>
         {
-            return new string[] { "" };
+            return "";
         };
 
-        public Func<string?[], Fat, string, string[]> exitExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> exitExecution = (args, wD) =>
         {
-            Console.WriteLine(Dim().Text("Exiting..."));
-            throw new Exception("[EXIT]");
+            Program.cM.exit = true;
+            return Dim().Text("Exiting...");
         };
 
-        public Func<string?[], Fat, string, string[]> clsExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> clsExecution = (args, wD) =>
         {
             Console.Clear();
-            return new string[] { "" };
+            return "";
         };
 
-        public Func<string?[], Fat, string, string[]> echoExecution = (args, fat, wD) =>
+        public Func<string[]?, string, string> echoExecution = (args, wD) =>
         {
-            return new string[] { "" };
+            List<string> outputs = new();
+
+            if (args != null)
+            {
+                foreach (string arg in args) outputs.Add(arg);
+            }
+
+            return string.Join(" ", outputs);
+        };
+
+        public Func<string[]?, string, string> setExecution = (args, wD) =>
+        {
+            return "";
+        };
+
+        public Func<string[]?, string, string> psExecution = (args, wD) =>
+        {
+            if (args != null) throw new Exception("Too many arguments, expected cero");
+            Console.WriteLine("PID\tNAME");
+            return string.Join("\n", Program.cM.taskList);
+        };
+
+        public Func<string[]?, string, string> killExecution = (args, wD) =>
+        {
+            List<int> pids = new();
+            if (args != null)
+            {
+                foreach (string arg in args)
+                {
+                    int pid;
+                    if (!int.TryParse(arg, out pid)) throw new Exception($"{arg} arguments must be pids");
+                    pids.Add(pid);
+                }
+            }
+
+            foreach (int pid in pids)
+            {
+                if (!Program.cM.taskList.Exists(x => x.pid == pid)) Console.WriteLine($"-bash: kill: ({pid}) - No such process");
+                else
+                {
+                    Program.cM.taskList.Find(x => x.pid == pid).kill();
+                }
+            }
+            
+            return "";
+        };
+
+        public Func<string[]?, string, string> sleepExecution = (args, wD) =>
+        {
+            if (args == null) throw new Exception("Number of seconds to sleep expected");
+            if (args.Length > 1) throw new Exception("Too many arguments, expected one");
+            int miliseconds = 0;
+            if (!int.TryParse(args[0], out miliseconds)) throw new Exception($"'{args[0]}' argument must be a number of seconds");
+            Thread.Sleep(miliseconds*1000);
+            return "";
         };
     }
 }
